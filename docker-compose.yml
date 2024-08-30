@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  document-generator-service:
+    container_name: document-generator
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: always
+    volumes:
+      - .:/usr/app 
+      - /usr/app/node_modules 
+    ports:
+      - "3001:3000" 
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - NATS_SERVERS=${NATS_SERVERS} 
+      - PORT=${PORT}
+    # env_file:
+    #   - .env # Archivo de variables de entorno opcional

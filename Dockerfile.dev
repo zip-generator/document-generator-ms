@@ -1,0 +1,24 @@
+FROM node:22-alpine3.19
+
+WORKDIR /usr/app
+
+# Copia los archivos necesarios para la instalación de dependencias
+COPY package.json pnpm-lock.yaml ./
+
+# Instala pnpm globalmente
+RUN npm install -g pnpm
+
+# Instala las dependencias usando pnpm
+RUN pnpm install
+
+# Copia el resto del código fuente
+COPY . .
+
+# Expone el puerto 3000 para que NestJS pueda ser accesible
+EXPOSE 3001
+
+# Configura la variable de entorno NODE_ENV como desarrollo (opcional)
+ENV NODE_ENV=development
+
+# Comando por defecto para iniciar la aplicación en modo desarrollo
+CMD ["pnpm", "run", "start:dev"]
