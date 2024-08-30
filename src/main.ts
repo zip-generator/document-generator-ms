@@ -1,20 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { envs } from './config';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { envs } from './config';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const logger = new Logger('DocumentGeneratorService-Main');
+  const logger = new Logger('Document-Generator-MS');
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
     {
       transport: Transport.NATS,
       options: {
-        url: envs.natsServers,
+        servers: envs.natsServers,
       },
     },
   );
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -23,6 +24,6 @@ async function bootstrap() {
   );
 
   await app.listen();
-  logger.log(`Document Generator Microservice running on port ${envs.port}`);
+  logger.log(`Products Microservice running on port ${envs.port}`);
 }
 bootstrap();
