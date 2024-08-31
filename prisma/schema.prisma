@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +5,196 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model contribuyentes {
+  id                               Int                                @id @default(autoincrement())
+  nombre                           String?                            @db.VarChar(100)
+  direccion                        String?                            @db.VarChar(150)
+  departamento                     Int?                               @default(0)
+  municipio                        Int?                               @default(0)
+  canton                           Int?                               @default(0)
+  pais                             Int?                               @default(0)
+  telefono                         String?                            @db.VarChar(20)
+  correo                           String?                            @db.VarChar(100)
+  tipo_contribuyente               String?                            @db.VarChar(50)
+  tipo_identificacion              Int?                               @default(0)
+  identificacion                   String?                            @db.VarChar(20)
+  fecha_creacion                   DateTime?                          @default(now()) @db.Timestamp(0)
+  fecha_modificacion               DateTime?                          @db.DateTime(0)
+  usuario_creacion                 String?                            @db.VarChar(50)
+  usuario_modificacion             String?                            @db.VarChar(50)
+  estado                           Int?                               @default(0)
+  numero_documento                 String?                            @db.VarChar(20)
+  apiKey                           String?                            @db.VarChar(100)
+  cantidad_dte                     Int?                               @default(0)
+  token                            String?                            @db.Text
+  plantilla                        String?                            @db.VarChar(100)
+  apikeyWhatsapp                   String?                            @db.VarChar(100)
+  whatsappInstance                 String?                            @db.VarChar(100)
+  usuario                          String?                            @db.VarChar(50)
+  password                         String?                            @db.Text
+  llave_publica                    String?                            @db.Text
+  codigo_actividad                 String?                            @db.Text
+  plantilla_ccf                    String?                            @db.Text
+  plantilla_factura                String?                            @db.Text
+  plantilla_sujeto_excluido        String?                            @db.Text
+  plantilla_nota_credito           String?                            @db.Text
+  plantilla_nota_debito            String?                            @db.Text
+  usuario_correo                   String?                            @db.Text
+  password_correo                  String?                            @db.Text
+  puerto_correo                    String?                            @db.Text
+  host_correo                      String?                            @db.Text
+  plantilla_comprobante_retencion  String?                            @db.Text
+  departamento_mh                  departamento_mh?                   @relation(fields: [departamento], references: [idDepartamento])
+  municipio_mh                     municipio_mh?                      @relation(fields: [municipio], references: [idMunicipio])
+  pais_mh                          pais_mh?                           @relation(fields: [pais], references: [idPais])
+  facturaelectronica_correlativos  facturaelectronica_correlativos[]
+  facturaelectronica_transacciones facturaelectronica_transacciones[]
+
+  @@index([canton], map: "idx_canton")
+  @@index([apiKey], map: "idx_contribuyentes_apiKey")
+  @@index([departamento], map: "idx_departamento")
+  @@index([municipio], map: "idx_municipio")
+  @@index([pais], map: "idx_pais")
+  @@index([tipo_contribuyente], map: "idx_tipo_contribuyente")
+  @@index([tipo_identificacion], map: "idx_tipo_identificacion")
+}
+
+model departamento_mh {
+  idDepartamento Int              @id @default(autoincrement())
+  nombre         String           @db.VarChar(100)
+  codigo         String           @db.VarChar(20)
+  descripcion    String           @db.VarChar(100)
+  zona           String           @db.VarChar(100)
+  idPais         Int
+  contribuyentes contribuyentes[]
+  pais_mh        pais_mh          @relation(fields: [idPais], references: [idPais], onDelete: NoAction)
+  municipio_mh   municipio_mh[]
+
+  @@index([idPais], map: "idx_id_pais")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaelectronica_contingencias {
+  id                               Int                                @id @default(autoincrement())
+  nit                              String?
+  payload                          String?                            @db.LongText
+  estado                           String?
+  fecha_hora                       DateTime?
+  mensaje                          String?
+  sello_recibido                   String?
+  observaciones                    String?
+  status                           Boolean                            @default(false)
+  facturaelectronica_lotes         facturaelectronica_lotes[]
+  facturaelectronica_transacciones facturaelectronica_transacciones[]
+
+  @@index([sello_recibido], map: "idx_sello_recibido_facturaelectronica_contingencias")
+}
+
+model facturaelectronica_correlativos {
+  id                    Int             @id @default(autoincrement())
+  id_contribuyente      Int?            @default(0)
+  tipo_dte              Int?            @default(0)
+  numero_control_actual Int?            @default(0)
+  caja                  Int?            @default(0)
+  sucursal              Int?            @default(0)
+  fecha_creacion        DateTime?       @default(now()) @db.Timestamp(0)
+  fecha_modificacion    DateTime?       @db.DateTime(0)
+  estado                Int?            @default(0)
+  contribuyentes        contribuyentes? @relation(fields: [id_contribuyente], references: [id])
+  tipos_dte             tipos_dte?      @relation(fields: [tipo_dte], references: [id])
+
+  @@index([tipo_dte], map: "facturaelectronica_correlativos_tipo_dte_fkey")
+  @@index([id_contribuyente], map: "idx_id_contribuyente")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaelectronica_lotes {
+  id                               Int                              @id @default(autoincrement())
+  codigo_lote                      String                           @unique @db.VarChar(50)
+  id_envio                         String                           @db.VarChar(50)
+  nit_emisor                       String                           @db.VarChar(50)
+  payload                          String?                          @db.LongText
+  response                         String?                          @db.LongText
+  estado                           String                           @db.VarChar(100)
+  fecha_procesamiento              DateTime?
+  sello_recibido_contingencia      String?                          @db.Text
+  id_contingencia                  Int
+  statusLote                       Boolean                          @default(true)
+  facturaelectronica_contingencias facturaelectronica_contingencias @relation(fields: [id_contingencia], references: [id], onDelete: NoAction)
+
+  @@index([id_contingencia], map: "facturaelectronica_lotes_id_contingencia_fkey")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaelectronica_transacciones {
+  id                               Int                               @id @default(autoincrement())
+  id_contribuyente                 Int?                              @default(0)
+  id_dte                           Int?                              @default(0)
+  fecha_emision                    DateTime?                         @default(now()) @db.DateTime(0)
+  dte                              String?                           @db.LongText
+  numero_control                   String?                           @db.VarChar(100)
+  uuid                             String?                           @db.VarChar(100)
+  estado_dte                       String?                           @db.VarChar(20)
+  anulado                          Int?                              @default(0)
+  anulacion                        String?                           @db.Text
+  sello_registro                   String?                           @db.VarChar(100)
+  firma_registro                   String?                           @db.VarChar(100)
+  id_factura_erp                   Int?                              @default(0)
+  status_sincronizacion            Int?                              @default(0)
+  observaciones                    String?                           @db.VarChar(100)
+  response_mh                      String?                           @db.LongText
+  payload                          String?                           @db.LongText
+  dte_anulado                      String?                           @db.Text
+  fecha_hora_procesamiento         DateTime?                         @db.DateTime(0)
+  codigo_lote                      String?                           @db.VarChar(50)
+  sello_recibido_contingencia      String?                           @db.VarChar(100)
+  contingencia                     Int?
+  idContingencia                   Int?
+  puntoVentaMh                     String?                           @db.VarChar(100)
+  facturaelectronica_contingencias facturaelectronica_contingencias? @relation(fields: [idContingencia], references: [id])
+  contribuyentes                   contribuyentes?                   @relation(fields: [id_contribuyente], references: [id])
+  tipos_dte                        tipos_dte?                        @relation(fields: [id_dte], references: [id])
+
+  @@index([codigo_lote], map: "idx_facturaelectronica_transacciones_codigo_lote")
+  @@index([uuid], map: "idx_facturaelectronica_transacciones_uuid")
+  @@index([idContingencia], map: "idx_idContingencia")
+  @@index([id_contribuyente], map: "idx_id_contribuyente")
+  @@index([id_dte], map: "idx_id_dte")
+}
+
+model municipio_mh {
+  idMunicipio     Int              @id @default(autoincrement())
+  codigo          String           @db.VarChar(20)
+  descripcion     String           @db.VarChar(100)
+  idDepartamento  Int
+  contribuyentes  contribuyentes[]
+  departamento_mh departamento_mh  @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: NoAction)
+
+  @@index([idDepartamento], map: "idx_id_departamento")
+}
+
+model pais_mh {
+  idPais          Int               @id @default(autoincrement())
+  codigo          String            @db.VarChar(20)
+  nombre          String            @db.VarChar(100)
+  contribuyentes  contribuyentes[]
+  departamento_mh departamento_mh[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tipos_dte {
+  id                               Int                                @id @default(autoincrement())
+  schema                           String?                            @db.LongText
+  descripcion                      String?                            @db.VarChar(50)
+  fecha_creacion                   DateTime?                          @default(now()) @db.Timestamp(0)
+  fecha_modificacion               DateTime?                          @db.DateTime(0)
+  usuario_creacion                 String?                            @db.VarChar(50)
+  usuario_modificacion             String?                            @db.VarChar(50)
+  estado                           Int?                               @default(0)
+  codigoDte                        String?                            @db.Text
+  versionDte                       String?                            @db.Text
+  facturaelectronica_correlativos  facturaelectronica_correlativos[]
+  facturaelectronica_transacciones facturaelectronica_transacciones[]
 }

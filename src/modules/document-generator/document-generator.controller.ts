@@ -5,7 +5,6 @@ import { MessagePattern } from '@nestjs/microservices';
 export class DocumentGeneratorController {
   @MessagePattern('generate-documents')
   generateDocuments(payload: unknown) {
-    console.log('generate-documents payload', payload);
-    return 'This action generates documents';
+    return 'This action generates documents' + payload;
   }
 }
