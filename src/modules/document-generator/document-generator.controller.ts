@@ -1,10 +1,15 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { DocumentGeneratorService } from './document-generator.service';
+import { GeneratePdfDto } from './dto';
 
 @Controller('document-generator')
 export class DocumentGeneratorController {
-  @MessagePattern('generate-documents')
-  generateDocuments(payload: unknown) {
-    return payload;
+  constructor(
+    private readonly documentGeneratorService: DocumentGeneratorService,
+  ) {}
+  @MessagePattern('documents:pdf')
+  generateDocuments(@Payload() payload: GeneratePdfDto): Promise<string> {
+    return this.documentGeneratorService.generatePdf(payload);
   }
 }
