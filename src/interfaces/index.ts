@@ -344,6 +344,19 @@ const getNameTemplate = (
   return template;
 };
 
+// Define el tipo de los datos individuales
+interface ProcessedData {
+  buffer: Buffer; // Ajusta el tipo según lo que realmente es `buffer`
+  identificacion: string; // Ajusta el tipo según lo que realmente es `identificacion`
+}
+
+// Define el tipo del grupo por fecha y tipo
+interface DataGroupedByDate {
+  [fecha: string]: {
+    [tipoDte: string]: ProcessedData[];
+  };
+}
+
 export {
   IFaturaElectronicaTransaccionalExtendedPdf,
   IResultReporte,
@@ -362,4 +375,5 @@ export {
   IResultDataforReports,
   IJSonFile,
   getNameTemplate,
+  DataGroupedByDate,
 };

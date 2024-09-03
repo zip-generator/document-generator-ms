@@ -1,7 +1,12 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { GeneratePdfDto } from './dto';
 import { DocumentRepository } from './repository/document.repository';
-import { IGroup, ItemsGroupped, ResultExtend } from '@app/interfaces';
+import {
+  DataGroupedByDate,
+  IGroup,
+  ItemsGroupped,
+  ResultExtend,
+} from '@app/interfaces';
 import { format } from 'date-fns';
 import { envs } from '@app/config';
 import { GroupBy } from '@app/plugins/lodash.plugin';
@@ -51,20 +56,13 @@ export class DocumentGeneratorService {
       const grouppedData: IGroup<ItemsGroupped> =
         GroupBy.property<ItemsGroupped>(newData, 'fechaEmision');
 
-      const dataGroupedByDate = await this.processGroupedData(
-        grouppedData,
-        contribuyente,
-      );
+      const dataGroupedByDate: DataGroupedByDate =
+        await this.processGroupedData(grouppedData, contribuyente);
       this.#logger.debug('QLO', {
-        dataGroupedByDate: dataGroupedByDate[0],
+        dataGroupedByDate: dataGroupedByDate,
       });
 
-      // return await this.zipService.createInMemoryZipAndCleanup<
-      //   IData<ItemsGroupped>
-      // >({
-      //   data: dataGroupedByDate,
-      // });
-      return 'qlos';
+      return 'pdf hechos perro';
     } catch (error) {
       this.#logger.error('Generate Pdf', error);
       throw new RpcException({
@@ -76,8 +74,8 @@ export class DocumentGeneratorService {
   private async processGroupedData(
     groupedData: IGroup<ItemsGroupped>,
     contribuyente: contribuyentes,
-  ) {
-    const dataGroupedByDate = {};
+  ): Promise<DataGroupedByDate> {
+    const dataGroupedByDate: DataGroupedByDate = {};
     await Promise.all(
       Object.entries(groupedData).map(async ([fecha, clientInvoices]) => {
         await Promise.all(
@@ -98,6 +96,7 @@ export class DocumentGeneratorService {
         );
       }),
     );
+
     return dataGroupedByDate;
   }
 
@@ -182,42 +181,3 @@ export class DocumentGeneratorService {
     }
   }
 }
-// for (const [fecha, clientInvoices] of Object.entries(groupedData)) {
-//   for (const item of clientInvoices) {
-//     const { fechaProcesamiento, hacienda, sello } = item;
-
-//     const document = await this.invoiceService.generateFiles(
-//       { fechaProcesamiento, payload: { hacienda } },
-//       contribuyente,
-//       false,
-//     );
-
-//     const url = this.invoiceService.generateUrl({
-//       ambiente: hacienda?.['identificacion']?.['ambiente'],
-//       codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
-//       fecEmi: hacienda?.['identificacion']?.['fecEmi'],
-//       baseUrl: envs.invoiceQueryUrl,
-//     });
-
-//     const codeQR = await this.invoiceService.generateCodesQR({
-//       url,
-//       buffer: document.buffer,
-//       codigoGeneracion: hacienda?.['identificacion']['codigoGeneracion'],
-//       numeroControl: hacienda?.['identificacion']['numeroControl'],
-//       sello,
-//     });
-
-//     const newDocument = { ...document, buffer: codeQR };
-//     const tipoDte = hacienda?.['identificacion']?.tipoDte;
-
-//     if (!dataGroupedByDate[fecha]) dataGroupedByDate[fecha] = {};
-//     if (!dataGroupedByDate[fecha][tipoDte])
-//       dataGroupedByDate[fecha][tipoDte] = [];
-
-//     dataGroupedByDate[fecha][tipoDte].push({
-//       buffer: newDocument.buffer,
-//       identificacion: { ...hacienda?.['identificacion'] },
-//     });
-//   }
-// }
-// return dataGroupedByDate;
