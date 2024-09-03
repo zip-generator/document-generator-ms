@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   buildCommonInfo,
   generarFilasEnBlancosReporte,
@@ -8,28 +8,16 @@ import {
   makeUrl,
 } from '@app/utils';
 import { InvoiceRepository } from './invoice.repository';
-import {
-  envs,
-  LIMITE_PAGINAS_REPORTES,
-  TIPO_IDENTIFICACION,
-} from '@app/config';
+import { LIMITE_PAGINAS_REPORTES } from '@app/config';
 import {
   getNameTemplate,
   IJSonFile,
   IResultDataforReports,
-  ITemplateInfo,
 } from '@app/interfaces';
-import { CurrencyAdapter } from '@app/plugins';
 import { contribuyentes } from '@prisma/client';
 import { CarboneService } from '../carbone/carbone.service';
 import { CarboneFormat } from '@app/enums';
 
-interface IGenerateInvoiceReportProp {
-  codigo: string;
-  whatsApp: string[];
-  email: string[];
-  apiKey: string;
-}
 interface IGenerateUrl {
   ambiente: string;
   codigoGeneracion: string;
@@ -44,26 +32,6 @@ interface IGenerateCodes {
   numeroControl: string;
 }
 
-interface IGenerateSubject {
-  tipoDte: string;
-  receiverName: string;
-  generationCode: string;
-}
-interface ISubject {
-  subject: string;
-  documentName: string;
-  invoiceName: string;
-}
-interface InvoiceDetails {
-  receiverName: string; // Nombre del receptor
-  emitterName: string; // Nombre del emisor
-  invoiceName: string; // Nombre de la factura
-  generationCode: string; // Código de generación
-  date: string; // Fecha de emisión (puede ser en formato ISO o cualquier formato de fecha)
-  totalOperation: number; // Monto total de la operación
-  totalToPay: number; // Monto total a pagar
-  totalSubjectToRetention: number; // Monto total sujeto a retención
-}
 interface IFileGenerated {
   jsonFile: Buffer;
   buffer: Buffer;
@@ -75,90 +43,6 @@ export class InvoiceService {
     private readonly invoiceRepository: InvoiceRepository,
     private readonly _pdfService: CarboneService,
   ) {}
-  async generateInvoiceReport(params: IGenerateInvoiceReportProp) {
-    const { codigo, whatsApp, email, apiKey } = params;
-    const { result, contribuyente } = await this.getFacturaAndContribuyente(
-      codigo,
-      apiKey,
-    );
-
-    const { jsonFile, buffer, dataTemplate } = await this.generateFiles(
-      result,
-      contribuyente,
-    );
-
-    const url = this.generateUrl({
-      ambiente: result?.payload?.hacienda.identificacion.ambiente,
-      codigoGeneracion: result.payload.hacienda.identificacion.codigoGeneracion,
-      fecEmi: result.payload.hacienda.identificacion.fecEmi,
-      baseUrl: envs.invoiceQueryUrl,
-    });
-    const codeQR = await this.generateCodesQR({
-      url,
-      buffer,
-      codigoGeneracion: result.payload.hacienda.identificacion.codigoGeneracion,
-      sello: result.sello,
-      numeroControl: result.payload.hacienda.identificacion.numeroControl,
-    });
-
-    const {
-      subject,
-      documentName,
-      invoiceName: nameFactura,
-    } = this.createInvoiceDetail({
-      tipoDte: result.payload.hacienda.identificacion.tipoDte,
-      receiverName: result.payload.hacienda.receptor.nombre,
-      generationCode: result.payload.hacienda.identificacion.codigoGeneracion,
-    });
-
-    const templateInfo: ITemplateInfo = this.templateInfo({
-      receiverName: result.payload.hacienda.receptor.nombre as string,
-      emitterName: result.payload.hacienda.emisor.nombre as string,
-      generationCode: result.payload.hacienda.identificacion
-        .codigoGeneracion as string,
-      date: result.payload.hacienda.identificacion.fecEmi as string,
-      totalOperation: result.payload.hacienda.resumen
-        .totalComprobante as number,
-      totalToPay: result.payload.hacienda.resumen.totalImpuesto as number,
-      totalSubjectToRetention: result.payload.hacienda.resumen
-        .totalComprobante as number,
-      invoiceName: nameFactura,
-    });
-
-    return {
-      jsonFile,
-      buffer,
-      dataTemplate,
-      codeQR,
-      subject,
-      documentName,
-      templateInfo,
-      email,
-      whatsApp,
-      identificacion: result.payload.hacienda.identificacion as string,
-    };
-  }
-  templateInfo({
-    receiverName,
-    emitterName,
-    invoiceName,
-    generationCode,
-    date,
-    totalOperation,
-    totalToPay,
-    totalSubjectToRetention,
-  }: InvoiceDetails): ITemplateInfo {
-    return {
-      nombreCliente: receiverName,
-      empresaEmisor: emitterName,
-      codigoGeneracion: generationCode,
-      fecha: date,
-      monto: CurrencyAdapter.create(
-        totalOperation ?? totalToPay ?? totalSubjectToRetention,
-      ).format(),
-      nameFactura: invoiceName,
-    };
-  }
 
   generateUrl({ ambiente, codigoGeneracion, fecEmi, baseUrl }: IGenerateUrl) {
     return makeUrl({
@@ -183,17 +67,7 @@ export class InvoiceService {
       numeroControl,
     );
   }
-  async getFacturaAndContribuyente(codigo: string, apiKey: string) {
-    const result =
-      await this.invoiceRepository.reportFacturaElectronica(codigo);
-    if (!result)
-      throw new UnprocessableEntityException('No se encontro la factura');
 
-    const contribuyente =
-      await this.invoiceRepository.searchContributorByApiKey(apiKey);
-
-    return { result, contribuyente };
-  }
   async generateFiles(
     result: any,
     contribuyente: contribuyentes,
@@ -254,16 +128,5 @@ export class InvoiceService {
         return acumulador;
       }, 0)
     );
-  }
-
-  createInvoiceDetail({
-    tipoDte,
-    receiverName,
-    generationCode,
-  }: IGenerateSubject): ISubject {
-    const subject = `${TIPO_IDENTIFICACION[tipoDte]} ${receiverName}`;
-    const documentName = generationCode;
-    const invoiceName = TIPO_IDENTIFICACION[tipoDte] as string;
-    return { subject, documentName, invoiceName };
   }
 }
