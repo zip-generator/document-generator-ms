@@ -76,51 +76,31 @@ export class DocumentGeneratorService {
   private async processGroupedData(
     groupedData: IGroup<ItemsGroupped>,
     contribuyente: contribuyentes,
-    batchSize: number = 10,
   ) {
     const dataGroupedByDate = {};
     await Promise.all(
       Object.entries(groupedData).map(async ([fecha, clientInvoices]) => {
-        await this.proccessBatches({
-          batchSize,
-          clientInvoices,
-          contribuyente,
-          dataGroupedByDate,
-          fecha,
-        });
+        await Promise.all(
+          clientInvoices.map(async (item) => {
+            const processedData = await this.processInvoiceItem(
+              item,
+              contribuyente,
+            );
+            this.groupDataByDateAndType(
+              {
+                buffer: processedData.buffer,
+                identificacion: item.hacienda?.['identificacion'],
+              },
+              fecha,
+              dataGroupedByDate,
+            );
+          }),
+        );
       }),
     );
     return dataGroupedByDate;
   }
 
-  private async proccessBatches({
-    batchSize,
-    clientInvoices,
-    contribuyente,
-    dataGroupedByDate,
-    fecha,
-  }: IProcessBatch) {
-    for (let i = 0; i < clientInvoices.length; i += batchSize) {
-      const batch = clientInvoices.slice(i, i + batchSize);
-
-      await Promise.all(
-        batch.map(async (item) => {
-          const processedData = await this.processInvoiceItem(
-            item,
-            contribuyente,
-          );
-          this.groupDataByDateAndType(
-            {
-              buffer: processedData.buffer,
-              identificacion: item.hacienda?.['identificacion'],
-            },
-            fecha,
-            dataGroupedByDate,
-          );
-        }),
-      );
-    }
-  }
   private async processInvoiceItem(
     item: ItemsGroupped,
     contribuyente: contribuyentes,
@@ -172,6 +152,34 @@ export class DocumentGeneratorService {
       buffer: processedData.buffer,
       identificacion: processedData.identificacion,
     });
+  }
+  private async proccessBatches({
+    batchSize,
+    clientInvoices,
+    contribuyente,
+    dataGroupedByDate,
+    fecha,
+  }: IProcessBatch) {
+    for (let i = 0; i < clientInvoices.length; i += batchSize) {
+      const batch = clientInvoices.slice(i, i + batchSize);
+
+      await Promise.all(
+        batch.map(async (item) => {
+          const processedData = await this.processInvoiceItem(
+            item,
+            contribuyente,
+          );
+          this.groupDataByDateAndType(
+            {
+              buffer: processedData.buffer,
+              identificacion: item.hacienda?.['identificacion'],
+            },
+            fecha,
+            dataGroupedByDate,
+          );
+        }),
+      );
+    }
   }
 }
 // for (const [fecha, clientInvoices] of Object.entries(groupedData)) {
