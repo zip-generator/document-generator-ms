@@ -1,19 +1,35 @@
-import { Controller } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { DocumentGeneratorService } from './document-generator.service';
 import { GeneratePdfDto } from './dto';
+import {
+  DOCUMENT_GENERATOR_QUEUE,
+  FILE_COMPRESSION_QUEUE,
+  GENERATE_PDF,
+} from '@app/config';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { GeneratePdfResponse } from './interfaces';
-import { GENERATE_PDF } from '@app/config';
 
 @Controller('document-generator')
 export class DocumentGeneratorController {
   constructor(
-    private readonly documentGeneratorService: DocumentGeneratorService,
+    @InjectQueue(DOCUMENT_GENERATOR_QUEUE)
+    private readonly documentQueue: Queue,
   ) {}
+
   @MessagePattern(GENERATE_PDF)
-  generateDocuments(
+  async generateDocuments(
     @Payload() payload: GeneratePdfDto,
   ): Promise<GeneratePdfResponse> {
-    return this.documentGeneratorService.generatePdf(payload);
+    const job = await this.documentQueue.add(FILE_COMPRESSION_QUEUE, payload, {
+      attempts: 3,
+      backoff: 1000,
+    });
+
+    return {
+      status: HttpStatus.ACCEPTED,
+      message: 'Document generation has been scheduled',
+      jobId: job.id,
+    };
   }
 }

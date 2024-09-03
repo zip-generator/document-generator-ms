@@ -15,7 +15,8 @@ import { contribuyentes } from '@prisma/client';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { parseJson } from '@app/utils';
 import { MessagingService } from '../messagin/messaging.service';
-import { GeneratePdfResponse } from './interfaces';
+import { DocumentGenreateResponse } from './interfaces';
+import { JobId } from 'bull';
 
 interface IProcessBatch {
   clientInvoices: ItemsGroupped[];
@@ -33,7 +34,10 @@ export class DocumentGeneratorService {
     private readonly messaginService: MessagingService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
-  async generatePdf(params: GeneratePdfDto): Promise<GeneratePdfResponse> {
+  async generatePdf(
+    params: GeneratePdfDto,
+    jobId: JobId,
+  ): Promise<DocumentGenreateResponse> {
     try {
       const [data, contribuyente] = await Promise.all([
         this.documentRepository.searchInvoices(params) as Promise<
@@ -64,7 +68,10 @@ export class DocumentGeneratorService {
         contribuyente,
       );
 
-      await this.client.emit<DataGroupedByDate>(PDF_CREATED, response);
+      await this.client.emit<DataGroupedByDate>(PDF_CREATED, {
+        data: response,
+        jobId,
+      });
       this.#logger.debug('ENVIANDO A COLA PARA POSTERIORMENTE CREAR ZIPS');
 
       return {
