@@ -346,8 +346,8 @@ const getNameTemplate = (
 
 // Define el tipo de los datos individuales
 interface ProcessedData {
-  buffer: Buffer; // Ajusta el tipo según lo que realmente es `buffer`
-  identificacion: string; // Ajusta el tipo según lo que realmente es `identificacion`
+  buffer: Buffer;
+  identificacion: object;
 }
 
 // Define el tipo del grupo por fecha y tipo

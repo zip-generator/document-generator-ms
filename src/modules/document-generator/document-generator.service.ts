@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { GeneratePdfDto } from './dto';
 import { DocumentRepository } from './repository/document.repository';
 import {
@@ -8,13 +8,14 @@ import {
   ResultExtend,
 } from '@app/interfaces';
 import { format } from 'date-fns';
-import { envs } from '@app/config';
+import { envs, NATS_SERVICE, PDF_CREATED } from '@app/config';
 import { GroupBy } from '@app/plugins/lodash.plugin';
 import { InvoiceService } from '../invoice/invoice.service';
-import { ZipServiceArchiver } from '../zip/zip-archiver.service';
 import { contribuyentes } from '@prisma/client';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { parseJson } from '@app/utils';
+import { MessagingService } from '../messagin/messaging.service';
+import { GeneratePdfResponse } from './interfaces';
 
 interface IProcessBatch {
   clientInvoices: ItemsGroupped[];
@@ -29,9 +30,10 @@ export class DocumentGeneratorService {
   constructor(
     private readonly documentRepository: DocumentRepository,
     private readonly invoiceService: InvoiceService,
-    private readonly zipService: ZipServiceArchiver,
+    private readonly messaginService: MessagingService,
+    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
-  async generatePdf(params: GeneratePdfDto) {
+  async generatePdf(params: GeneratePdfDto): Promise<GeneratePdfResponse> {
     try {
       const [data, contribuyente] = await Promise.all([
         this.documentRepository.searchInvoices(params) as Promise<
@@ -56,13 +58,19 @@ export class DocumentGeneratorService {
       const grouppedData: IGroup<ItemsGroupped> =
         GroupBy.property<ItemsGroupped>(newData, 'fechaEmision');
 
-      const dataGroupedByDate: DataGroupedByDate =
-        await this.processGroupedData(grouppedData, contribuyente);
-      this.#logger.debug('QLO', {
-        dataGroupedByDate: dataGroupedByDate,
-      });
+      // const dataGroupedByDate: DataGroupedByDate =
+      const response: DataGroupedByDate = await this.processGroupedData(
+        grouppedData,
+        contribuyente,
+      );
 
-      return 'pdf hechos perro';
+      await this.client.emit<DataGroupedByDate>(PDF_CREATED, response);
+      this.#logger.debug('ENVIANDO A COLA PARA POSTERIORMENTE CREAR ZIPS');
+
+      return {
+        message: 'pdf created',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       this.#logger.error('Generate Pdf', error);
       throw new RpcException({
@@ -128,7 +136,7 @@ export class DocumentGeneratorService {
     });
 
     return {
-      buffer: codeQR,
+      buffer: this.codecPdf(codeQR),
       ...document,
     };
   }
@@ -151,6 +159,9 @@ export class DocumentGeneratorService {
       buffer: processedData.buffer,
       identificacion: processedData.identificacion,
     });
+  }
+  private codecPdf(data: Buffer) {
+    return data.toString('base64');
   }
   private async proccessBatches({
     batchSize,
