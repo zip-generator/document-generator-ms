@@ -69,8 +69,10 @@ export class DocumentGeneratorService {
       );
 
       await this.client.emit<DataGroupedByDate>(PDF_CREATED, {
-        data: response,
-        jobId,
+        data: {
+          data: response,
+        },
+        jobId: +jobId,
       });
       this.#logger.debug('ENVIANDO A COLA PARA POSTERIORMENTE CREAR ZIPS');
 
