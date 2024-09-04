@@ -31,7 +31,7 @@ export class DocumentGeneratorController {
     return {
       status: HttpStatus.ACCEPTED,
       message: 'Document generation has been scheduled',
-      jobId: job,
+      jobId: job.id,
     };
   }
 
@@ -40,7 +40,6 @@ export class DocumentGeneratorController {
     @Payload('jobId', ParseIntPipe) jobId: number,
   ) {
     const job: Job = await this.documentQueue.getJob(+jobId);
-    this.#logger.debug('QLO LOCO', { job });
     if (!job) {
       throw new RpcException('Job not found');
     }
@@ -48,13 +47,12 @@ export class DocumentGeneratorController {
     if (!job.isCompleted) {
       throw new RpcException('Job is still in progress');
     }
-
+    job.remove();
     return {
       status: HttpStatus.OK,
       message: 'Job has been completed',
       data: {
-        downloadUrl: job.returnvalue.data.data?.url,
-        key: job.returnvalue.data.data?.key,
+        key: job?.returnvalue?.data?.data?.key,
       },
     };
   }
