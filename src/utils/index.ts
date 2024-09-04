@@ -8,7 +8,7 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import { addDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 export * from './make-template';
-
+import { randomUUID, UUID } from 'crypto';
 const timeZone = 'America/El_Salvador';
 const removeLatestItem = <T>(array: T[]) => {
   array.pop();
@@ -126,10 +126,15 @@ const parseJson = (json: string | object): object => {
   return json instanceof Object ? json : JSON.parse(json);
 };
 
+const getRandomUuid = (): UUID => {
+  return randomUUID();
+};
+
 export {
   removeLatestItem,
   generarFilasEnBlancosReporte,
   getNexyDay,
   generatePayloadJsonFile,
   parseJson,
+  getRandomUuid,
 };

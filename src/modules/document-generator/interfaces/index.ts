@@ -4,9 +4,12 @@ import { JobId } from 'bull';
 interface GeneratePdfResponse {
   message: string;
   status: HttpStatus;
-  jobId: JobId;
+  jobId: unknown;
 }
 
 type DocumentGenreateResponse = Pick<GeneratePdfResponse, 'message' | 'status'>;
 
-export { GeneratePdfResponse, DocumentGenreateResponse };
+interface ResponseDocument extends DocumentGenreateResponse {
+  data: any;
+}
+export { GeneratePdfResponse, DocumentGenreateResponse, ResponseDocument };

@@ -73,7 +73,6 @@ export class DocumentRepository {
               },
             },
           },
-          take: 10,
         },
       )) as unknown as IFaturaElectronicaTransaccionalExtendedPdf[];
 

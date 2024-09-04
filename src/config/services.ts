@@ -5,3 +5,5 @@ export const GENERATE_PDF = 'documents.pdf';
 export const PDF_CREATED = 'pdf.created';
 export const DOCUMENT_GENERATOR_QUEUE = 'document-generator';
 export const FILE_COMPRESSION_QUEUE = 'file-compression';
+export const ZIP_STATUS = 'zip.status';
+export const ZIP_COMPLETED = 'zip.completed';
