@@ -44,16 +44,18 @@ export class DocumentGeneratorController {
       throw new RpcException('Job not found');
     }
 
-    if (!job.isCompleted) {
-      throw new RpcException('Job is still in progress');
+    const isCompleted = await job.isCompleted();
+    this.#logger.debug("Job's status", { status: isCompleted });
+    if (isCompleted) {
+      this.#logger.log(`Job ${job.id} has been completed`, { job });
+      return {
+        status: HttpStatus.OK,
+        message: job.getState(),
+        data: {
+          key: job?.returnvalue?.data?.data?.key,
+        },
+      };
     }
-    job.remove();
-    return {
-      status: HttpStatus.OK,
-      message: 'Job has been completed',
-      data: {
-        key: job?.returnvalue?.data?.data?.key,
-      },
-    };
+    throw new RpcException('Job is still in progress');
   }
 }

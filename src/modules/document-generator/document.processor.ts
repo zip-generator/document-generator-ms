@@ -8,6 +8,7 @@ import {
   ResponseDocument,
 } from './interfaces';
 import { Logger } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 
 @Processor(DOCUMENT_GENERATOR_QUEUE)
 export class DocumentProcessor {
@@ -29,7 +30,7 @@ export class DocumentProcessor {
         data: response.data,
       };
     } catch (error) {
-      throw new Error(error);
+      throw new RpcException(error);
     }
   }
 }
