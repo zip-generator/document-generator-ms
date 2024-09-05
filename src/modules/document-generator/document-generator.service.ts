@@ -17,21 +17,22 @@ import { parseJson } from '@app/utils';
 import { ResponseDocument } from './interfaces';
 import { JobId } from 'bull';
 import { firstValueFrom } from 'rxjs';
+import { TempFileService } from './temp-file.service';
 
-interface IProcessBatch {
-  clientInvoices: ItemsGroupped[];
-  fecha: string;
-  contribuyente: contribuyentes;
-  batchSize: number;
-  dataGroupedByDate: any;
-}
+// interface IProcessBatch {
+//   clientInvoices: ItemsGroupped[];
+//   fecha: string;
+//   contribuyente: contribuyentes;
+//   batchSize: number;
+//   dataGroupedByDate: any;
+// }
 @Injectable()
 export class DocumentGeneratorService {
   #logger = new Logger(DocumentGeneratorService.name);
   constructor(
     private readonly documentRepository: DocumentRepository,
     private readonly invoiceService: InvoiceService,
-
+    private readonly tempFileService: TempFileService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
   async generatePdf(
@@ -66,6 +67,7 @@ export class DocumentGeneratorService {
       const response: DataGroupedByDate = await this.processGroupedData(
         grouppedData,
         contribuyente,
+        jobId,
       );
 
       this.#logger.debug('sending data to nats service', { jobId });
@@ -94,6 +96,7 @@ export class DocumentGeneratorService {
   private async processGroupedData(
     groupedData: IGroup<ItemsGroupped>,
     contribuyente: contribuyentes,
+    jobId: JobId,
   ): Promise<DataGroupedByDate> {
     const dataGroupedByDate: DataGroupedByDate = {};
     await Promise.all(
@@ -111,6 +114,7 @@ export class DocumentGeneratorService {
               },
               fecha,
               dataGroupedByDate,
+              jobId,
             );
           }),
         );
@@ -152,11 +156,12 @@ export class DocumentGeneratorService {
       ...document,
     };
   }
-  private groupDataByDateAndType(
+  private async groupDataByDateAndType(
     processedData: { buffer: Buffer; identificacion: any },
     fecha: string,
     dataGroupedByDate: any,
-  ): void {
+    jobId: JobId,
+  ): Promise<void> {
     const tipoDte = processedData.identificacion?.tipoDte;
 
     if (!dataGroupedByDate[fecha]) {
@@ -168,39 +173,13 @@ export class DocumentGeneratorService {
     }
 
     dataGroupedByDate[fecha][tipoDte].push({
-      buffer: processedData.buffer,
+      buffer: await this.tempFileService.saveBufferToFile({
+        buffer: processedData.buffer,
+        extension: 'pdf',
+        fileName: `${processedData?.identificacion?.codigoGeneracion}`,
+        folder: `${jobId}`,
+      }),
       identificacion: processedData.identificacion,
     });
-  }
-  private codecPdf(data: Buffer) {
-    return data.toString('base64');
-  }
-  private async proccessBatches({
-    batchSize,
-    clientInvoices,
-    contribuyente,
-    dataGroupedByDate,
-    fecha,
-  }: IProcessBatch) {
-    for (let i = 0; i < clientInvoices.length; i += batchSize) {
-      const batch = clientInvoices.slice(i, i + batchSize);
-
-      await Promise.all(
-        batch.map(async (item) => {
-          const processedData = await this.processInvoiceItem(
-            item,
-            contribuyente,
-          );
-          this.groupDataByDateAndType(
-            {
-              buffer: processedData.buffer,
-              identificacion: item.hacienda?.['identificacion'],
-            },
-            fecha,
-            dataGroupedByDate,
-          );
-        }),
-      );
-    }
   }
 }

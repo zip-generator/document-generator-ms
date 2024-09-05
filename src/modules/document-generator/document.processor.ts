@@ -21,7 +21,6 @@ export class DocumentProcessor {
         job.data as any,
         job.id,
       );
-      this.#logger.debug('responses', { response });
 
       return {
         message: response.message,
