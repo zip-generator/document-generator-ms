@@ -27,10 +27,8 @@ export class DocumentRepository {
   ): Promise<IFaturaElectronicaTransaccionalExtendedPdf[] | IResultReporte[]> {
     const where = {};
     if (params.documentType && params.documentType !== DOCUMENT_TYPES.TODOS) {
-      where['tipos_dte'] = {
-        codigoDte: {
-          in: params.documentType,
-        },
+      where['tiposDte'] = {
+        codigoDte: params.documentType,
       };
     }
 
