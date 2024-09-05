@@ -96,7 +96,6 @@ export class DocumentRepository {
           id: true,
           uuid: true,
         },
-        take: 500,
       });
     return this.formatData(result);
   }
