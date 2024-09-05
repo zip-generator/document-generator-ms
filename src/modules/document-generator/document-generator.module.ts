@@ -24,6 +24,7 @@ import { PdfMakeModule } from '../pdf-make/pdf-make.module';
     MessaginModule,
     BullMqModule,
     PdfMakeModule,
+    NatsModule,
   ],
   controllers: [DocumentGeneratorController],
   providers: [

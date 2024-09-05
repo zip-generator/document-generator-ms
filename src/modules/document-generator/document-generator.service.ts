@@ -14,7 +14,7 @@ import { InvoiceService } from '../invoice/invoice.service';
 import { contribuyentes } from '@prisma/client';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { parseJson } from '@app/utils';
-import { ResponseDocument } from './interfaces';
+import { IFileGenerated, ResponseDocument } from './interfaces';
 import { JobId } from 'bull';
 import { firstValueFrom } from 'rxjs';
 import { TempFileService } from './temp-file.service';
@@ -26,6 +26,12 @@ import { TempFileService } from './temp-file.service';
 //   batchSize: number;
 //   dataGroupedByDate: any;
 // }
+interface IProcessInvoiceItem {
+  item: ItemsGroupped;
+  contribuyente: contribuyentes;
+  identification: any;
+  jobId: JobId;
+}
 @Injectable()
 export class DocumentGeneratorService {
   #logger = new Logger(DocumentGeneratorService.name);
@@ -103,18 +109,19 @@ export class DocumentGeneratorService {
       Object.entries(groupedData).map(async ([fecha, clientInvoices]) => {
         await Promise.all(
           clientInvoices.map(async (item) => {
-            const processedData = await this.processInvoiceItem(
+            const processedData = await this.processInvoiceItem({
               item,
               contribuyente,
-            );
-            this.groupDataByDateAndType(
+              identification: item.hacienda?.['identificacion'],
+              jobId,
+            });
+            await this.groupDataByDateAndType(
               {
                 pdfDocument: processedData.pdfDocument,
                 identificacion: item.hacienda?.['identificacion'],
               },
               fecha,
               dataGroupedByDate,
-              jobId,
             );
           }),
         );
@@ -124,18 +131,22 @@ export class DocumentGeneratorService {
     return dataGroupedByDate;
   }
 
-  private async processInvoiceItem(
-    item: ItemsGroupped,
-    contribuyente: contribuyentes,
-  ) {
-    // sello
+  private async processInvoiceItem({
+    item,
+    contribuyente,
+    identification,
+    jobId,
+  }: IProcessInvoiceItem) {
+    // TODO: FALTA ARREGLAR EL SELLO RECEPCION
     const { fechaProcesamiento, hacienda } = item;
 
-    const document = await this.invoiceService.generateFiles(
-      { fechaProcesamiento, payload: { hacienda } },
+    const document: IFileGenerated = await this.invoiceService.generateFiles({
+      result: { fechaProcesamiento, payload: { hacienda } },
       contribuyente,
-      false,
-    );
+      generateJsonFile: false,
+      identification,
+      jobId,
+    });
 
     // const url = this.invoiceService.generateUrl({
     //   ambiente: hacienda?.['identificacion']?.['ambiente'],
@@ -153,15 +164,14 @@ export class DocumentGeneratorService {
     // });
 
     return {
-      buffer: document.pdfDocument,
+      buffer: document,
       ...document,
     };
   }
   private async groupDataByDateAndType(
-    processedData: { pdfDocument: PDFKit.PDFDocument; identificacion: any },
+    processedData: { pdfDocument: string; identificacion: any },
     fecha: string,
     dataGroupedByDate: any,
-    jobId: JobId,
   ): Promise<void> {
     const tipoDte = processedData.identificacion?.tipoDte;
 
@@ -174,12 +184,7 @@ export class DocumentGeneratorService {
     }
 
     dataGroupedByDate[fecha][tipoDte].push({
-      buffer: await this.tempFileService.saveBufferToFile({
-        document: processedData.pdfDocument,
-        extension: 'pdf',
-        fileName: `${processedData?.identificacion?.codigoGeneracion}`,
-        folder: `${jobId}`,
-      }),
+      buffer: processedData.pdfDocument,
       identificacion: processedData.identificacion,
     });
   }

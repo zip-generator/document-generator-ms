@@ -15,6 +15,7 @@ const headerSection = (options: HeaderSectionOptions) => {
     generationCode,
     receptionStamp,
   } = options;
+
   const headerContent: Content = {
     columns: [
       {
