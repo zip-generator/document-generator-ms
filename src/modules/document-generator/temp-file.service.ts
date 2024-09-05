@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import { join } from 'path';
 interface ISaveBufferToFile {
-  buffer: Buffer;
+  document: PDFKit.PDFDocument;
   fileName: string;
   folder: string;
   extension: string;
@@ -13,7 +13,7 @@ export class TempFileService {
   constructor() {}
 
   async saveBufferToFile({
-    buffer,
+    document,
     fileName,
     folder,
     extension,
@@ -31,10 +31,12 @@ export class TempFileService {
       path: join(dirPath, `${fileName}.${extension}`),
     });
     try {
-      await fs.promises.writeFile(
-        join(dirPath, `${fileName}.${extension}`),
-        buffer,
+      document.info.Title = fileName;
+      document.pipe(
+        fs.createWriteStream(join(dirPath, `${fileName}.${extension}`)),
       );
+
+      document.end();
       return join(dirPath, `${fileName}.${extension}`);
     } catch (err) {
       this.#logger.error('Failed to write file', {

@@ -1,4 +1,4 @@
-import * as currency from 'currency.js';
+import currency from 'currency.js';
 const CURRENCY_OPTIONS: currency.Options = {
   precision: 2,
   symbol: '$ ',

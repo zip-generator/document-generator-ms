@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@prisma/client": "^5.19.1",
     "@types/archiver": "^6.0.2",
+    "@types/pdfmake": "^0.2.9",
     "archiver": "^7.0.1",
     "bull": "^4.16.1",
     "carbone": "^3.5.6",

@@ -109,7 +109,7 @@ export class DocumentGeneratorService {
             );
             this.groupDataByDateAndType(
               {
-                buffer: processedData.buffer,
+                pdfDocument: processedData.pdfDocument,
                 identificacion: item.hacienda?.['identificacion'],
               },
               fecha,
@@ -128,7 +128,8 @@ export class DocumentGeneratorService {
     item: ItemsGroupped,
     contribuyente: contribuyentes,
   ) {
-    const { fechaProcesamiento, hacienda, sello } = item;
+    // sello
+    const { fechaProcesamiento, hacienda } = item;
 
     const document = await this.invoiceService.generateFiles(
       { fechaProcesamiento, payload: { hacienda } },
@@ -136,28 +137,28 @@ export class DocumentGeneratorService {
       false,
     );
 
-    const url = this.invoiceService.generateUrl({
-      ambiente: hacienda?.['identificacion']?.['ambiente'],
-      codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
-      fecEmi: hacienda?.['identificacion']?.['fecEmi'],
-      baseUrl: envs.invoiceQueryUrl,
-    });
+    // const url = this.invoiceService.generateUrl({
+    //   ambiente: hacienda?.['identificacion']?.['ambiente'],
+    //   codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
+    //   fecEmi: hacienda?.['identificacion']?.['fecEmi'],
+    //   baseUrl: envs.invoiceQueryUrl,
+    // });
 
-    const codeQR = await this.invoiceService.generateCodesQR({
-      url,
-      buffer: document.buffer,
-      codigoGeneracion: hacienda?.['identificacion']['codigoGeneracion'],
-      numeroControl: hacienda?.['identificacion']['numeroControl'],
-      sello,
-    });
+    // const codeQR = await this.invoiceService.generateCodesQR({
+    //   url,
+    //   buffer: document.buffer,
+    //   codigoGeneracion: hacienda?.['identificacion']['codigoGeneracion'],
+    //   numeroControl: hacienda?.['identificacion']['numeroControl'],
+    //   sello,
+    // });
 
     return {
-      buffer: codeQR,
+      buffer: document.pdfDocument,
       ...document,
     };
   }
   private async groupDataByDateAndType(
-    processedData: { buffer: Buffer; identificacion: any },
+    processedData: { pdfDocument: PDFKit.PDFDocument; identificacion: any },
     fecha: string,
     dataGroupedByDate: any,
     jobId: JobId,
@@ -174,7 +175,7 @@ export class DocumentGeneratorService {
 
     dataGroupedByDate[fecha][tipoDte].push({
       buffer: await this.tempFileService.saveBufferToFile({
-        buffer: processedData.buffer,
+        document: processedData.pdfDocument,
         extension: 'pdf',
         fileName: `${processedData?.identificacion?.codigoGeneracion}`,
         folder: `${jobId}`,

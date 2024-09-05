@@ -9,14 +9,10 @@ import {
 } from '@app/utils';
 import { InvoiceRepository } from './invoice.repository';
 import { LIMITE_PAGINAS_REPORTES } from '@app/config';
-import {
-  getNameTemplate,
-  IJSonFile,
-  IResultDataforReports,
-} from '@app/interfaces';
+import { IJSonFile, IResultDataforReports } from '@app/interfaces';
 import { contribuyentes } from '@prisma/client';
-import { CarboneService } from '../carbone/carbone.service';
-import { CarboneFormat } from '@app/enums';
+import { PrinterService } from '../pdf-make/printer.service';
+import { headerSection } from '../reports';
 
 interface IGenerateUrl {
   ambiente: string;
@@ -34,14 +30,14 @@ interface IGenerateCodes {
 
 interface IFileGenerated {
   jsonFile: Buffer;
-  buffer: Buffer;
+  pdfDocument: PDFKit.PDFDocument;
   dataTemplate: IResultDataforReports;
 }
 @Injectable()
 export class InvoiceService {
   constructor(
     private readonly invoiceRepository: InvoiceRepository,
-    private readonly _pdfService: CarboneService,
+    private readonly _pdfService: PrinterService,
   ) {}
 
   generateUrl({ ambiente, codigoGeneracion, fecEmi, baseUrl }: IGenerateUrl) {
@@ -83,10 +79,10 @@ export class InvoiceService {
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
 
-    const template: string = getNameTemplate(
-      result.payload.hacienda.identificacion.tipoDte,
-      contribuyente,
-    );
+    // const template: string = getNameTemplate(
+    //   result.payload.hacienda.identificacion.tipoDte,
+    //   contribuyente,
+    // );
     const dataTemplate: IResultDataforReports = buildCommonInfo({
       cuerpoDocumento: result.payload.hacienda.cuerpoDocumento,
       documentoR:
@@ -108,14 +104,19 @@ export class InvoiceService {
       generarFilasEnBlancosReporte(dataTemplate, LIMITE_PAGINAS_REPORTES);
     }
 
-    const buffer: Buffer =
-      await this._pdfService.renderTemplate<IResultDataforReports>({
-        templateKey: template,
-        data: dataTemplate,
-        format: CarboneFormat.pdf,
-      });
+    const pdfDocument: PDFKit.PDFDocument = await this._pdfService.createPdf({
+      content: [
+        headerSection({
+          controlNumber: result.payload.hacienda.numeroControl,
+          emitionDate: result.payload.hacienda.fecEmi,
+          emitionTime: result.payload.hacienda.horaEmi,
+          generationCode: result.payload.hacienda.codigoGeneracion,
+          receptionStamp: result.payload.hacienda.sello,
+        }),
+      ],
+    });
 
-    return { jsonFile, buffer, dataTemplate };
+    return { jsonFile, pdfDocument, dataTemplate };
   }
 
   calculateIvaValue(resumen: any) {
