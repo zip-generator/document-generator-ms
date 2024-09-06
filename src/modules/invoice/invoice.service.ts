@@ -10,8 +10,8 @@ import { InvoiceRepository } from './invoice.repository';
 import { GENERATE_DOCUMENT, NATS_SERVICE } from '@app/config';
 import { IJSonFile, IResultDataforReports } from '@app/interfaces';
 import { PrinterService } from '../pdf-make/printer.service';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { catchError, firstValueFrom } from 'rxjs';
 import { JobId } from 'bull';
 import { IFileGenerated } from '../document-generator/interfaces';
 
@@ -106,6 +106,9 @@ export class InvoiceService {
       result,
       resumen: result.payload.hacienda.resumen,
     });
+    this.#logger.debug('INVOICE', {
+      infoReceptor: dataTemplate.info?.['receptor'],
+    });
 
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
@@ -122,23 +125,39 @@ export class InvoiceService {
           receptor: {
             name: dataTemplate.info?.['receptor']?.['nombre'],
             document: dataTemplate.info?.['receptor']?.['numDocumento'],
-            econimicActivity: {
-              activityDescription:
-                dataTemplate.info?.['receptor']?.['descActividad'],
-              activityCode: dataTemplate.info?.['receptor']?.['codActividad'],
-            },
+            econimicActivity:
+              dataTemplate.info?.['receptor']?.['descActividad'],
             direction: {
-              city: dataTemplate.info?.['receptor']?.['municipio'],
-              complement: dataTemplate.info?.['receptor']?.['complemento'],
-              department: dataTemplate.info?.['receptor']?.['departamento'],
+              city: dataTemplate.info?.['receptor']?.['direccion']?.[
+                'municipio'
+              ],
+              complement:
+                dataTemplate.info?.['receptor']?.['direccion']?.['complemento'],
+              department:
+                dataTemplate.info?.['receptor']?.['direccion']?.[
+                  'departamento'
+                ],
             },
             nrc: dataTemplate.info?.['receptor']?.['nrc'],
             phone: dataTemplate.info?.['receptor']?.['telefono'],
+            doctor: dataTemplate.info?.['infoSeguros']?.['medico'],
+            // deducible: dataTemplate.info?.['infoSeguros']?.['deducible'],
+            // copaago: dataTemplate.info?.['infoSeguros']?.['copaago'],
+            // coaseguroPersentage:
+            //   dataTemplate.info?.['infoSeguros']?.['porcentajeCoaseguro'],
+            atencionId: dataTemplate.info?.['infoSeguros']?.['atencionId'],
+            insuranceCompany:
+              dataTemplate.info?.['infoSeguros']?.['aseguradora'],
           },
         },
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,
         folder: `${jobId}`,
+      }),
+    ).catch(
+      catchError((error) => {
+        this.#logger.error(error);
+        throw new RpcException(error);
       }),
     );
     return {
