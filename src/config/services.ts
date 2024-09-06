@@ -7,3 +7,5 @@ export const DOCUMENT_GENERATOR_QUEUE = 'document-generator';
 export const FILE_COMPRESSION_QUEUE = 'file-compression';
 export const ZIP_STATUS = 'zip.status';
 export const ZIP_COMPLETED = 'zip.completed';
+export const GENERATE_DOCUMENT = 'generate.document';
+export const DOCUMENT_GENERATED = 'document.generated';

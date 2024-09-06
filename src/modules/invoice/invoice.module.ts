@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { InvoiceRepository } from './invoice.repository';
-import { CarboneModule } from '../carbone/carbone.module';
 import { PrismaService } from '@app/prisma.service';
+import { PdfMakeModule } from '../pdf-make/pdf-make.module';
+import { NatsModule } from '../transports/nats.module';
 
 @Module({
-  imports: [CarboneModule],
+  imports: [PdfMakeModule, NatsModule],
   providers: [InvoiceService, InvoiceRepository, PrismaService],
   exports: [InvoiceService],
 })

@@ -9,7 +9,13 @@
         "include": "public/templates/**/*",
         "watchAssets": true,
         "outDir": "dist/"
+      },
+      {
+        "include": "modules/pdf-make/fonts/*",
+        "watchAssets": true,
+        "outDir": "dist/"
       }
+
     ]
     
   }

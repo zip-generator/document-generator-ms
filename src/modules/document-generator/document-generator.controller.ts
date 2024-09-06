@@ -48,11 +48,11 @@ export class DocumentGeneratorController {
     this.#logger.debug("Job's status", { status: isCompleted });
     if (isCompleted) {
       this.#logger.log(`Job ${job.id} has been completed`, {
-        job: job.returnvalue,
+        job: job.returnvalue.data,
       });
       return {
         status: HttpStatus.OK,
-        message: job.getState(),
+        message: job.returnvalue.data.message,
         data: {
           key: job?.returnvalue?.data?.data?.awsKey,
         },

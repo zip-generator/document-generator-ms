@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   buildCommonInfo,
   generarFilasEnBlancosReporte,
@@ -8,15 +8,22 @@ import {
   makeUrl,
 } from '@app/utils';
 import { InvoiceRepository } from './invoice.repository';
-import { LIMITE_PAGINAS_REPORTES } from '@app/config';
+import {
+  GENERATE_DOCUMENT,
+  LIMITE_PAGINAS_REPORTES,
+  NATS_SERVICE,
+} from '@app/config';
 import {
   getNameTemplate,
   IJSonFile,
   IResultDataforReports,
 } from '@app/interfaces';
 import { contribuyentes } from '@prisma/client';
-import { CarboneService } from '../carbone/carbone.service';
-import { CarboneFormat } from '@app/enums';
+import { PrinterService } from '../pdf-make/printer.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+import { JobId } from 'bull';
+import { IFileGenerated } from '../document-generator/interfaces';
 
 interface IGenerateUrl {
   ambiente: string;
@@ -32,16 +39,20 @@ interface IGenerateCodes {
   numeroControl: string;
 }
 
-interface IFileGenerated {
-  jsonFile: Buffer;
-  buffer: Buffer;
-  dataTemplate: IResultDataforReports;
+interface IGenerateFiles {
+  result: any;
+  contribuyente: contribuyentes;
+  generateJsonFile: boolean;
+  identification: unknown;
+  jobId: JobId;
 }
 @Injectable()
 export class InvoiceService {
+  #logger = new Logger(InvoiceService.name);
   constructor(
     private readonly invoiceRepository: InvoiceRepository,
-    private readonly _pdfService: CarboneService,
+    private readonly _pdfService: PrinterService,
+    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
 
   generateUrl({ ambiente, codigoGeneracion, fecEmi, baseUrl }: IGenerateUrl) {
@@ -68,11 +79,13 @@ export class InvoiceService {
     );
   }
 
-  async generateFiles(
-    result: any,
-    contribuyente: contribuyentes,
+  async generateFiles({
+    result,
+    contribuyente,
     generateJsonFile = true,
-  ): Promise<IFileGenerated> {
+    identification,
+    jobId,
+  }: IGenerateFiles): Promise<IFileGenerated> {
     const fechaNextDay: string = getNexyDay(result?.fechaProcesamiento);
     let jsonFile: Buffer;
     if (generateJsonFile) {
@@ -83,7 +96,7 @@ export class InvoiceService {
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
 
-    const template: string = getNameTemplate(
+    getNameTemplate(
       result.payload.hacienda.identificacion.tipoDte,
       contribuyente,
     );
@@ -108,14 +121,26 @@ export class InvoiceService {
       generarFilasEnBlancosReporte(dataTemplate, LIMITE_PAGINAS_REPORTES);
     }
 
-    const buffer: Buffer =
-      await this._pdfService.renderTemplate<IResultDataforReports>({
-        templateKey: template,
-        data: dataTemplate,
-        format: CarboneFormat.pdf,
-      });
-
-    return { jsonFile, buffer, dataTemplate };
+    const pdfDocument: string = await firstValueFrom(
+      this.client.send(GENERATE_DOCUMENT, {
+        data: {
+          controlNumber: result.payload.hacienda.identificacion.numeroControl,
+          emitionDate: result.payload.hacienda.identificacion.fecEmi,
+          emitionTime: result.payload.hacienda.identificacion.horEmi,
+          generationCode:
+            result.payload.hacienda.identificacion.codigoGeneracion,
+          receptionStamp: result.payload.hacienda.sello ?? 'QLO',
+        },
+        extension: 'pdf',
+        fileName: `${identification?.['codigoGeneracion']}`,
+        folder: `${jobId}`,
+      }),
+    );
+    return {
+      jsonFile,
+      pdfDocument,
+      dataTemplate,
+    };
   }
 
   calculateIvaValue(resumen: any) {
