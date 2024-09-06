@@ -106,9 +106,6 @@ export class InvoiceService {
       result,
       resumen: result.payload.hacienda.resumen,
     });
-    this.#logger.debug('INVOICE', {
-      infoReceptor: dataTemplate.info?.['receptor'],
-    });
 
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
@@ -149,6 +146,7 @@ export class InvoiceService {
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],
           },
+          body: dataTemplate.data,
         },
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,
