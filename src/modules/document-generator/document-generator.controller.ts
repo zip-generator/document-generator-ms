@@ -26,6 +26,7 @@ export class DocumentGeneratorController {
     const job = await this.documentQueue.add(FILE_COMPRESSION_QUEUE, payload, {
       attempts: 3,
       backoff: 1000,
+      removeOnFail: true,
     });
 
     return {

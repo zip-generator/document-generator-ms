@@ -1,24 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   buildCommonInfo,
-  generarFilasEnBlancosReporte,
   generateCodeQR,
   generatePayloadJsonFile,
   getNexyDay,
   makeUrl,
 } from '@app/utils';
 import { InvoiceRepository } from './invoice.repository';
-import {
-  GENERATE_DOCUMENT,
-  LIMITE_PAGINAS_REPORTES,
-  NATS_SERVICE,
-} from '@app/config';
-import {
-  getNameTemplate,
-  IJSonFile,
-  IResultDataforReports,
-} from '@app/interfaces';
-import { contribuyentes } from '@prisma/client';
+import { GENERATE_DOCUMENT, NATS_SERVICE } from '@app/config';
+import { IJSonFile, IResultDataforReports } from '@app/interfaces';
 import { PrinterService } from '../pdf-make/printer.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -41,10 +31,10 @@ interface IGenerateCodes {
 
 interface IGenerateFiles {
   result: any;
-  contribuyente: contribuyentes;
   generateJsonFile: boolean;
   identification: unknown;
   jobId: JobId;
+  url: string;
 }
 @Injectable()
 export class InvoiceService {
@@ -81,10 +71,10 @@ export class InvoiceService {
 
   async generateFiles({
     result,
-    contribuyente,
     generateJsonFile = true,
     identification,
     jobId,
+    url,
   }: IGenerateFiles): Promise<IFileGenerated> {
     const fechaNextDay: string = getNexyDay(result?.fechaProcesamiento);
     let jsonFile: Buffer;
@@ -96,10 +86,10 @@ export class InvoiceService {
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
 
-    getNameTemplate(
-      result.payload.hacienda.identificacion.tipoDte,
-      contribuyente,
-    );
+    // getNameTemplate(
+    //   result.payload.hacienda.identificacion.tipoDte,
+    //   contribuyente,
+    // );
     const dataTemplate: IResultDataforReports = buildCommonInfo({
       cuerpoDocumento: result.payload.hacienda.cuerpoDocumento,
       documentoR:
@@ -117,19 +107,34 @@ export class InvoiceService {
       resumen: result.payload.hacienda.resumen,
     });
 
-    if (dataTemplate.data.length < LIMITE_PAGINAS_REPORTES) {
-      generarFilasEnBlancosReporte(dataTemplate, LIMITE_PAGINAS_REPORTES);
-    }
-
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
         data: {
-          controlNumber: result.payload.hacienda.identificacion.numeroControl,
-          emitionDate: result.payload.hacienda.identificacion.fecEmi,
-          emitionTime: result.payload.hacienda.identificacion.horEmi,
-          generationCode:
-            result.payload.hacienda.identificacion.codigoGeneracion,
-          receptionStamp: result.payload.hacienda.sello ?? 'QLO',
+          header: {
+            controlNumber: result.payload.hacienda.identificacion.numeroControl,
+            emitionDate: result.payload.hacienda.identificacion.fecEmi,
+            emitionTime: result.payload.hacienda.identificacion.horEmi,
+            generationCode:
+              result.payload.hacienda.identificacion.codigoGeneracion,
+            receptionStamp: identification?.['sello'],
+            url,
+          },
+          receptor: {
+            name: dataTemplate.info?.['receptor']?.['nombre'],
+            document: dataTemplate.info?.['receptor']?.['numDocumento'],
+            econimicActivity: {
+              activityDescription:
+                dataTemplate.info?.['receptor']?.['descActividad'],
+              activityCode: dataTemplate.info?.['receptor']?.['codActividad'],
+            },
+            direction: {
+              city: dataTemplate.info?.['receptor']?.['municipio'],
+              complement: dataTemplate.info?.['receptor']?.['complemento'],
+              department: dataTemplate.info?.['receptor']?.['departamento'],
+            },
+            nrc: dataTemplate.info?.['receptor']?.['nrc'],
+            phone: dataTemplate.info?.['receptor']?.['telefono'],
+          },
         },
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,

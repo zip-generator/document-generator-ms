@@ -115,6 +115,7 @@ const generatePayloadJsonFile = (
   payloadMH: any,
   invoice: IResultReporte,
 ): IJSonFile => {
+  console.log({ invoice });
   return {
     ...payloadMH,
     selloRecibido: invoice.sello,

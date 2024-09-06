@@ -11,24 +11,14 @@ import { format } from 'date-fns';
 import { envs, NATS_SERVICE, PDF_CREATED } from '@app/config';
 import { GroupBy } from '@app/plugins/lodash.plugin';
 import { InvoiceService } from '../invoice/invoice.service';
-import { contribuyentes } from '@prisma/client';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { parseJson } from '@app/utils';
 import { IFileGenerated, ResponseDocument } from './interfaces';
 import { JobId } from 'bull';
 import { firstValueFrom } from 'rxjs';
-import { TempFileService } from './temp-file.service';
 
-// interface IProcessBatch {
-//   clientInvoices: ItemsGroupped[];
-//   fecha: string;
-//   contribuyente: contribuyentes;
-//   batchSize: number;
-//   dataGroupedByDate: any;
-// }
 interface IProcessInvoiceItem {
   item: ItemsGroupped;
-  contribuyente: contribuyentes;
   identification: any;
   jobId: JobId;
 }
@@ -38,7 +28,6 @@ export class DocumentGeneratorService {
   constructor(
     private readonly documentRepository: DocumentRepository,
     private readonly invoiceService: InvoiceService,
-    private readonly tempFileService: TempFileService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
   async generatePdf(
@@ -46,7 +35,7 @@ export class DocumentGeneratorService {
     jobId: JobId,
   ): Promise<ResponseDocument> {
     try {
-      const [data, contribuyente] = await Promise.all([
+      const [data] = await Promise.all([
         this.documentRepository.searchInvoices(params) as Promise<
           ResultExtend[]
         >,
@@ -66,13 +55,13 @@ export class DocumentGeneratorService {
           };
         },
       );
+
       const grouppedData: IGroup<ItemsGroupped> =
         GroupBy.property<ItemsGroupped>(newData, 'fechaEmision');
 
       // const dataGroupedByDate: DataGroupedByDate =
       const response: DataGroupedByDate = await this.processGroupedData(
         grouppedData,
-        contribuyente,
         jobId,
       );
 
@@ -101,7 +90,6 @@ export class DocumentGeneratorService {
   }
   private async processGroupedData(
     groupedData: IGroup<ItemsGroupped>,
-    contribuyente: contribuyentes,
     jobId: JobId,
   ): Promise<DataGroupedByDate> {
     const dataGroupedByDate: DataGroupedByDate = {};
@@ -111,8 +99,10 @@ export class DocumentGeneratorService {
           clientInvoices.map(async (item) => {
             const processedData = await this.processInvoiceItem({
               item,
-              contribuyente,
-              identification: item.hacienda?.['identificacion'],
+              identification: {
+                ...item.hacienda?.['identificacion'],
+                sello: item?.sello,
+              },
               jobId,
             });
             await this.groupDataByDateAndType(
@@ -133,28 +123,24 @@ export class DocumentGeneratorService {
 
   private async processInvoiceItem({
     item,
-    contribuyente,
     identification,
     jobId,
   }: IProcessInvoiceItem) {
-    // TODO: FALTA ARREGLAR EL SELLO RECEPCION
     const { fechaProcesamiento, hacienda } = item;
-
+    const url = this.invoiceService.generateUrl({
+      ambiente: hacienda?.['identificacion']?.['ambiente'],
+      codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
+      fecEmi: hacienda?.['identificacion']?.['fecEmi'],
+      baseUrl: envs.invoiceQueryUrl,
+    });
     const document: IFileGenerated = await this.invoiceService.generateFiles({
       result: { fechaProcesamiento, payload: { hacienda } },
-      contribuyente,
       generateJsonFile: false,
       identification,
       jobId,
+      url,
     });
-
-    // const url = this.invoiceService.generateUrl({
-    //   ambiente: hacienda?.['identificacion']?.['ambiente'],
-    //   codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
-    //   fecEmi: hacienda?.['identificacion']?.['fecEmi'],
-    //   baseUrl: envs.invoiceQueryUrl,
-    // });
-
+    //TODO: ELIMINAR ESTO
     // const codeQR = await this.invoiceService.generateCodesQR({
     //   url,
     //   buffer: document.buffer,
