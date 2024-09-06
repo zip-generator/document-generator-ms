@@ -1,5 +1,5 @@
+import { IResultDataforReports } from '@app/interfaces';
 import { HttpStatus } from '@nestjs/common';
-import { JobId } from 'bull';
 
 interface GeneratePdfResponse {
   message: string;
@@ -12,4 +12,15 @@ type DocumentGenreateResponse = Pick<GeneratePdfResponse, 'message' | 'status'>;
 interface ResponseDocument extends DocumentGenreateResponse {
   data: any;
 }
-export { GeneratePdfResponse, DocumentGenreateResponse, ResponseDocument };
+
+interface IFileGenerated {
+  jsonFile: Buffer;
+  pdfDocument: string;
+  dataTemplate: IResultDataforReports;
+}
+export {
+  GeneratePdfResponse,
+  DocumentGenreateResponse,
+  ResponseDocument,
+  IFileGenerated,
+};

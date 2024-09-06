@@ -14,16 +14,23 @@ import { InvoiceService } from '../invoice/invoice.service';
 import { contribuyentes } from '@prisma/client';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { parseJson } from '@app/utils';
-import { ResponseDocument } from './interfaces';
+import { IFileGenerated, ResponseDocument } from './interfaces';
 import { JobId } from 'bull';
 import { firstValueFrom } from 'rxjs';
+import { TempFileService } from './temp-file.service';
 
-interface IProcessBatch {
-  clientInvoices: ItemsGroupped[];
-  fecha: string;
+// interface IProcessBatch {
+//   clientInvoices: ItemsGroupped[];
+//   fecha: string;
+//   contribuyente: contribuyentes;
+//   batchSize: number;
+//   dataGroupedByDate: any;
+// }
+interface IProcessInvoiceItem {
+  item: ItemsGroupped;
   contribuyente: contribuyentes;
-  batchSize: number;
-  dataGroupedByDate: any;
+  identification: any;
+  jobId: JobId;
 }
 @Injectable()
 export class DocumentGeneratorService {
@@ -31,7 +38,7 @@ export class DocumentGeneratorService {
   constructor(
     private readonly documentRepository: DocumentRepository,
     private readonly invoiceService: InvoiceService,
-
+    private readonly tempFileService: TempFileService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
   async generatePdf(
@@ -66,6 +73,7 @@ export class DocumentGeneratorService {
       const response: DataGroupedByDate = await this.processGroupedData(
         grouppedData,
         contribuyente,
+        jobId,
       );
 
       this.#logger.debug('sending data to nats service', { jobId });
@@ -94,19 +102,22 @@ export class DocumentGeneratorService {
   private async processGroupedData(
     groupedData: IGroup<ItemsGroupped>,
     contribuyente: contribuyentes,
+    jobId: JobId,
   ): Promise<DataGroupedByDate> {
     const dataGroupedByDate: DataGroupedByDate = {};
     await Promise.all(
       Object.entries(groupedData).map(async ([fecha, clientInvoices]) => {
         await Promise.all(
           clientInvoices.map(async (item) => {
-            const processedData = await this.processInvoiceItem(
+            const processedData = await this.processInvoiceItem({
               item,
               contribuyente,
-            );
-            this.groupDataByDateAndType(
+              identification: item.hacienda?.['identificacion'],
+              jobId,
+            });
+            await this.groupDataByDateAndType(
               {
-                buffer: processedData.buffer,
+                pdfDocument: processedData.pdfDocument,
                 identificacion: item.hacienda?.['identificacion'],
               },
               fecha,
@@ -120,43 +131,48 @@ export class DocumentGeneratorService {
     return dataGroupedByDate;
   }
 
-  private async processInvoiceItem(
-    item: ItemsGroupped,
-    contribuyente: contribuyentes,
-  ) {
-    const { fechaProcesamiento, hacienda, sello } = item;
+  private async processInvoiceItem({
+    item,
+    contribuyente,
+    identification,
+    jobId,
+  }: IProcessInvoiceItem) {
+    // TODO: FALTA ARREGLAR EL SELLO RECEPCION
+    const { fechaProcesamiento, hacienda } = item;
 
-    const document = await this.invoiceService.generateFiles(
-      { fechaProcesamiento, payload: { hacienda } },
+    const document: IFileGenerated = await this.invoiceService.generateFiles({
+      result: { fechaProcesamiento, payload: { hacienda } },
       contribuyente,
-      false,
-    );
-
-    const url = this.invoiceService.generateUrl({
-      ambiente: hacienda?.['identificacion']?.['ambiente'],
-      codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
-      fecEmi: hacienda?.['identificacion']?.['fecEmi'],
-      baseUrl: envs.invoiceQueryUrl,
+      generateJsonFile: false,
+      identification,
+      jobId,
     });
 
-    const codeQR = await this.invoiceService.generateCodesQR({
-      url,
-      buffer: document.buffer,
-      codigoGeneracion: hacienda?.['identificacion']['codigoGeneracion'],
-      numeroControl: hacienda?.['identificacion']['numeroControl'],
-      sello,
-    });
+    // const url = this.invoiceService.generateUrl({
+    //   ambiente: hacienda?.['identificacion']?.['ambiente'],
+    //   codigoGeneracion: hacienda?.['identificacion']?.['codigoGeneracion'],
+    //   fecEmi: hacienda?.['identificacion']?.['fecEmi'],
+    //   baseUrl: envs.invoiceQueryUrl,
+    // });
+
+    // const codeQR = await this.invoiceService.generateCodesQR({
+    //   url,
+    //   buffer: document.buffer,
+    //   codigoGeneracion: hacienda?.['identificacion']['codigoGeneracion'],
+    //   numeroControl: hacienda?.['identificacion']['numeroControl'],
+    //   sello,
+    // });
 
     return {
-      buffer: codeQR,
+      buffer: document,
       ...document,
     };
   }
-  private groupDataByDateAndType(
-    processedData: { buffer: Buffer; identificacion: any },
+  private async groupDataByDateAndType(
+    processedData: { pdfDocument: string; identificacion: any },
     fecha: string,
     dataGroupedByDate: any,
-  ): void {
+  ): Promise<void> {
     const tipoDte = processedData.identificacion?.tipoDte;
 
     if (!dataGroupedByDate[fecha]) {
@@ -168,39 +184,8 @@ export class DocumentGeneratorService {
     }
 
     dataGroupedByDate[fecha][tipoDte].push({
-      buffer: processedData.buffer,
+      buffer: processedData.pdfDocument,
       identificacion: processedData.identificacion,
     });
-  }
-  private codecPdf(data: Buffer) {
-    return data.toString('base64');
-  }
-  private async proccessBatches({
-    batchSize,
-    clientInvoices,
-    contribuyente,
-    dataGroupedByDate,
-    fecha,
-  }: IProcessBatch) {
-    for (let i = 0; i < clientInvoices.length; i += batchSize) {
-      const batch = clientInvoices.slice(i, i + batchSize);
-
-      await Promise.all(
-        batch.map(async (item) => {
-          const processedData = await this.processInvoiceItem(
-            item,
-            contribuyente,
-          );
-          this.groupDataByDateAndType(
-            {
-              buffer: processedData.buffer,
-              identificacion: item.hacienda?.['identificacion'],
-            },
-            fecha,
-            dataGroupedByDate,
-          );
-        }),
-      );
-    }
   }
 }

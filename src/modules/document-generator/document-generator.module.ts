@@ -11,6 +11,8 @@ import { DocumentProcessor } from './document.processor';
 import { BullMqModule } from '@modules/bull-mq/bull-mq.module';
 import { BullModule } from '@nestjs/bull';
 import { DOCUMENT_GENERATOR_QUEUE } from '@app/config';
+import { TempFileService } from './temp-file.service';
+import { PdfMakeModule } from '../pdf-make/pdf-make.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { DOCUMENT_GENERATOR_QUEUE } from '@app/config';
     NatsModule,
     MessaginModule,
     BullMqModule,
+    PdfMakeModule,
+    NatsModule,
   ],
   controllers: [DocumentGeneratorController],
   providers: [
@@ -28,6 +32,7 @@ import { DOCUMENT_GENERATOR_QUEUE } from '@app/config';
     PrismaService,
     DocumentRepository,
     DocumentProcessor,
+    TempFileService,
   ],
 })
 export class DocumentGeneratorModule {}
