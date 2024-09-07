@@ -146,6 +146,7 @@ export class InvoiceService {
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],
           },
+          resume: dataTemplate.info?.['resumen'],
           body: dataTemplate.data,
         },
         extension: 'pdf',
