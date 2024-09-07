@@ -107,6 +107,8 @@ export class InvoiceService {
       resumen: result.payload.hacienda.resumen,
     });
 
+    const invoiceType = result.payload.hacienda.identificacion.tipoDte;
+
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
         data: {
@@ -152,6 +154,7 @@ export class InvoiceService {
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,
         folder: `${jobId}`,
+        invoiceType,
       }),
     ).catch(
       catchError((error) => {
