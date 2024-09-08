@@ -10,7 +10,7 @@ import {
 import { InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { GeneratePdfResponse } from './interfaces';
-
+const lifeTimeQueue = 5; // time in seconds (24 hours = 86400) for the queue to be removed after the job is completed
 @Controller('document-generator')
 export class DocumentGeneratorController {
   #logger = new Logger(DocumentGeneratorController.name);
@@ -23,17 +23,28 @@ export class DocumentGeneratorController {
   async generateDocuments(
     @Payload() payload: GeneratePdfDto,
   ): Promise<GeneratePdfResponse> {
-    const job = await this.documentQueue.add(FILE_COMPRESSION_QUEUE, payload, {
-      attempts: 3,
-      backoff: 1000,
-      removeOnFail: true,
-    });
+    try {
+      const job = await this.documentQueue.add(
+        FILE_COMPRESSION_QUEUE,
+        payload,
+        {
+          attempts: 3,
+          backoff: 1000,
+          removeOnFail: true,
+          removeOnComplete: {
+            age: lifeTimeQueue,
+          },
+        },
+      );
 
-    return {
-      status: HttpStatus.ACCEPTED,
-      message: 'Document generation has been scheduled',
-      jobId: job.id,
-    };
+      return {
+        status: HttpStatus.ACCEPTED,
+        message: 'Document generation has been scheduled',
+        jobId: job.id,
+      };
+    } catch (error) {
+      throw new RpcException(error.message ?? 'Error generating document');
+    }
   }
 
   @MessagePattern(ZIP_STATUS)
@@ -50,6 +61,7 @@ export class DocumentGeneratorController {
       this.#logger.log(`Job ${job.id} has been completed`, {
         job: job.returnvalue.data,
       });
+      job?.remove();
       return {
         status: HttpStatus.OK,
         message: job.returnvalue.data.message,

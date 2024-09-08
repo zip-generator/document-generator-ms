@@ -8,7 +8,6 @@ const DTE_CUSTOM: Record<string, string> = {
   [STR_TIPOS_DTE.notaCredito]: '05',
   [STR_TIPOS_DTE.notaDebito]: '06',
 };
-const LIMITE_PAGINAS_REPORTES = 10;
 
 const TIPO_IDENTIFICACION = {
   '01': 'Reporte consumidor final',
@@ -17,4 +16,4 @@ const TIPO_IDENTIFICACION = {
   '14': 'Comprobante de Sujeto Excluido',
   '05': 'Nota de Credito',
 };
-export { DTE_CUSTOM, LIMITE_PAGINAS_REPORTES, TIPO_IDENTIFICACION };
+export { DTE_CUSTOM, TIPO_IDENTIFICACION };

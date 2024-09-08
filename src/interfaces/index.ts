@@ -1,5 +1,3 @@
-import { contribuyentes } from '@prisma/client';
-
 type TipoDte = {
   id: number;
   codigoDte: string;
@@ -312,38 +310,6 @@ interface IJSonFile extends IResultReporte {
   firmaElectronica: string;
 }
 
-const getNameTemplate = (
-  tipoDte: string,
-  contribuyente: contribuyentes,
-): string => {
-  let template: string;
-  switch (tipoDte) {
-    case '01':
-      template = contribuyente.plantillaFactura;
-      break;
-
-    case '03':
-      template = contribuyente.plantillaCcf;
-      break;
-
-    case '14':
-      template = contribuyente.plantillaSujetoExcluido;
-      break;
-    case '07':
-      template = contribuyente.plantillaComprobanteRetencion;
-      break;
-    case '05':
-      template = contribuyente.plantillaNotaCredito;
-      break;
-
-    default:
-      template = 'sin plantilla';
-      break;
-  }
-
-  return template;
-};
-
 // Define el tipo de los datos individuales
 interface ProcessedData {
   buffer: Buffer;
@@ -374,6 +340,5 @@ export {
   ITemplateInfo,
   IResultDataforReports,
   IJSonFile,
-  getNameTemplate,
   DataGroupedByDate,
 };

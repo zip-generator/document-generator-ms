@@ -1,15 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   buildCommonInfo,
-  generateCodeQR,
   generatePayloadJsonFile,
   getNexyDay,
   makeUrl,
 } from '@app/utils';
-import { InvoiceRepository } from './invoice.repository';
 import { GENERATE_DOCUMENT, NATS_SERVICE } from '@app/config';
 import { IJSonFile, IResultDataforReports } from '@app/interfaces';
-import { PrinterService } from '../pdf-make/printer.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { catchError, firstValueFrom } from 'rxjs';
 import { JobId } from 'bull';
@@ -20,13 +17,6 @@ interface IGenerateUrl {
   codigoGeneracion: string;
   fecEmi: string;
   baseUrl: string;
-}
-interface IGenerateCodes {
-  buffer: Buffer;
-  codigoGeneracion: string;
-  sello: string;
-  url: string;
-  numeroControl: string;
 }
 
 interface IGenerateFiles {
@@ -39,11 +29,7 @@ interface IGenerateFiles {
 @Injectable()
 export class InvoiceService {
   #logger = new Logger(InvoiceService.name);
-  constructor(
-    private readonly invoiceRepository: InvoiceRepository,
-    private readonly _pdfService: PrinterService,
-    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
-  ) {}
+  constructor(@Inject(NATS_SERVICE) private readonly client: ClientProxy) {}
 
   generateUrl({ ambiente, codigoGeneracion, fecEmi, baseUrl }: IGenerateUrl) {
     return makeUrl({
@@ -52,21 +38,6 @@ export class InvoiceService {
       fecEmi: fecEmi,
       url: baseUrl,
     });
-  }
-  async generateCodesQR({
-    buffer,
-    codigoGeneracion,
-    sello,
-    url,
-    numeroControl,
-  }: IGenerateCodes) {
-    return await generateCodeQR(
-      buffer,
-      codigoGeneracion,
-      sello,
-      url,
-      numeroControl,
-    );
   }
 
   async generateFiles({
@@ -86,10 +57,6 @@ export class InvoiceService {
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
 
-    // getNameTemplate(
-    //   result.payload.hacienda.identificacion.tipoDte,
-    //   contribuyente,
-    // );
     const dataTemplate: IResultDataforReports = buildCommonInfo({
       cuerpoDocumento: result.payload.hacienda.cuerpoDocumento,
       documentoR:
@@ -140,16 +107,17 @@ export class InvoiceService {
             nrc: dataTemplate.info?.['receptor']?.['nrc'],
             phone: dataTemplate.info?.['receptor']?.['telefono'],
             doctor: dataTemplate.info?.['infoSeguros']?.['medico'],
-            // deducible: dataTemplate.info?.['infoSeguros']?.['deducible'],
-            // copaago: dataTemplate.info?.['infoSeguros']?.['copaago'],
-            // coaseguroPersentage:
-            //   dataTemplate.info?.['infoSeguros']?.['porcentajeCoaseguro'],
+            deducible: dataTemplate.info?.['infoSeguros']?.['deducible'],
+            copaago: dataTemplate.info?.['infoSeguros']?.['copaago'],
+            coaseguroPercentage:
+              dataTemplate.info?.['infoSeguros']?.['porcentajeCoaseguro'],
             atencionId: dataTemplate.info?.['infoSeguros']?.['atencionId'],
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],
           },
           resume: dataTemplate.info?.['resumen'],
           body: dataTemplate.data,
+          fechaNextDay,
         },
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,

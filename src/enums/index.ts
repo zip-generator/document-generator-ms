@@ -1,7 +1,3 @@
-enum CarboneFormat {
-  excel = 'xlsx',
-  pdf = 'pdf',
-}
 enum DOCUMENT_TYPES {
   CONSUMIDOR_FINAL = '01',
   CREDITO_FISCAL = '03',
@@ -23,4 +19,4 @@ enum STR_TIPOS_DTE {
   notaCredito = '05',
   notaDebito = '06',
 }
-export { CarboneFormat, DOCUMENT_TYPES, ZIP_FILE_FORMAT, STR_TIPOS_DTE };
+export { DOCUMENT_TYPES, ZIP_FILE_FORMAT, STR_TIPOS_DTE };

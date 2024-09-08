@@ -10,11 +10,10 @@ import {
 import { format } from 'date-fns';
 import { envs, NATS_SERVICE, PDF_CREATED } from '@app/config';
 import { GroupBy } from '@app/plugins/lodash.plugin';
-import { InvoiceService } from '../../invoice/invoice.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { getRandomUuid, parseJson } from '@app/utils';
 import { ResponseDocument } from '../interfaces';
-import { JobId } from 'bull';
+import { Job } from 'bull';
 import { firstValueFrom } from 'rxjs';
 import { DocumentProcessorService } from './document-processor.service';
 
@@ -26,14 +25,13 @@ export class DocumentGeneratorService {
   #logger = new Logger(DocumentGeneratorService.name);
   constructor(
     private readonly documentRepository: DocumentRepository,
-    private readonly invoiceService: InvoiceService,
     private readonly documentProcessor: DocumentProcessorService,
     private readonly tempFolderService: TempFileService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
   async generatePdf(
     params: GeneratePdfDto,
-    jobId: JobId,
+    jobId: Job,
   ): Promise<ResponseDocument> {
     try {
       const [data] = await Promise.all([
@@ -42,6 +40,15 @@ export class DocumentGeneratorService {
         >,
         this.documentRepository.searchContributorByApiKey(envs.apiKey),
       ]);
+      if (!data.length) {
+        await jobId.moveToFailed({
+          message: 'no data found',
+        });
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: 'no data found',
+        });
+      }
 
       const newData: ItemsGroupped[] = data.map(
         ({ payload, fechaProcesamiento, sello, ...rest }) => {
@@ -62,13 +69,13 @@ export class DocumentGeneratorService {
 
       // const dataGroupedByDate: DataGroupedByDate =
       const response: DataGroupedByDate =
-        await this.documentProcessor.processGroupedData(grouppedData, jobId);
+        await this.documentProcessor.processGroupedData(grouppedData, jobId.id);
 
       const fileName =
         await this.tempFolderService.saveJsonFile<DataGroupedByDate>({
           data: response,
-          fileName: `${jobId}`,
-          folder: `${jobId}${delimiter}${getRandomUuid()}`,
+          fileName: `${jobId.id}`,
+          folder: `${jobId.id}${delimiter}${getRandomUuid()}`,
         });
 
       const responseq = await firstValueFrom(
@@ -76,7 +83,7 @@ export class DocumentGeneratorService {
           data: {
             fileName,
           },
-          jobId: +jobId,
+          jobId: +jobId.id,
         }),
       );
 

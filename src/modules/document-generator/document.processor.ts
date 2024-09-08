@@ -19,7 +19,7 @@ export class DocumentProcessor {
     try {
       const response: ResponseDocument = await this.documentService.generatePdf(
         job.data as any,
-        job.id,
+        job,
       );
 
       return {

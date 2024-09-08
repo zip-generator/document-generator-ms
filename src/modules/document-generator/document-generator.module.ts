@@ -12,7 +12,6 @@ import { BullMqModule } from '@modules/bull-mq/bull-mq.module';
 import { BullModule } from '@nestjs/bull';
 import { DOCUMENT_GENERATOR_QUEUE } from '@app/config';
 import { TempFileService } from './services/temp-file.service';
-import { PdfMakeModule } from '../pdf-make/pdf-make.module';
 import { DocumentGrouperService } from './services/document-grouper.service';
 import { DocumentProcessorService } from './services';
 import { DocumentProcessor } from './document.processor';
@@ -26,7 +25,6 @@ import { DocumentProcessor } from './document.processor';
     NatsModule,
     MessaginModule,
     BullMqModule,
-    PdfMakeModule,
     NatsModule,
   ],
   controllers: [DocumentGeneratorController],
