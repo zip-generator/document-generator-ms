@@ -12,12 +12,15 @@ import { envs, NATS_SERVICE, PDF_CREATED } from '@app/config';
 import { GroupBy } from '@app/plugins/lodash.plugin';
 import { InvoiceService } from '../../invoice/invoice.service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { parseJson } from '@app/utils';
+import { getRandomUuid, parseJson } from '@app/utils';
 import { ResponseDocument } from '../interfaces';
 import { JobId } from 'bull';
 import { firstValueFrom } from 'rxjs';
 import { DocumentProcessorService } from './document-processor.service';
 
+import { TempFileService } from './temp-file.service';
+
+const delimiter = '-';
 @Injectable()
 export class DocumentGeneratorService {
   #logger = new Logger(DocumentGeneratorService.name);
@@ -25,6 +28,7 @@ export class DocumentGeneratorService {
     private readonly documentRepository: DocumentRepository,
     private readonly invoiceService: InvoiceService,
     private readonly documentProcessor: DocumentProcessorService,
+    private readonly tempFolderService: TempFileService,
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
   ) {}
   async generatePdf(
@@ -60,10 +64,17 @@ export class DocumentGeneratorService {
       const response: DataGroupedByDate =
         await this.documentProcessor.processGroupedData(grouppedData, jobId);
 
+      const fileName =
+        await this.tempFolderService.saveJsonFile<DataGroupedByDate>({
+          data: response,
+          fileName: `${jobId}`,
+          folder: `${jobId}${delimiter}${getRandomUuid()}`,
+        });
+
       const responseq = await firstValueFrom(
         this.client.send<DataGroupedByDate>(PDF_CREATED, {
           data: {
-            data: response,
+            fileName,
           },
           jobId: +jobId,
         }),
