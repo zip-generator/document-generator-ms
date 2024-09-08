@@ -1,5 +1,5 @@
 import { DOCUMENT_GENERATOR_QUEUE, FILE_COMPRESSION_QUEUE } from '@app/config';
-import { DocumentGeneratorService } from './document-generator.service';
+import { DocumentGeneratorService } from './services/document-generator.service';
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import {
@@ -29,6 +29,7 @@ export class DocumentProcessor {
         data: response.data,
       };
     } catch (error) {
+      this.#logger.error('Error processing job', error);
       throw new RpcException(error);
     }
   }

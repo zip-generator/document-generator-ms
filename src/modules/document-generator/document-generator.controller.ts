@@ -46,7 +46,6 @@ export class DocumentGeneratorController {
     }
 
     const isCompleted = await job.isCompleted();
-    this.#logger.debug("Job's status", { status: isCompleted });
     if (isCompleted) {
       this.#logger.log(`Job ${job.id} has been completed`, {
         job: job.returnvalue.data,

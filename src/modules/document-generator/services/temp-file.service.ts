@@ -19,17 +19,9 @@ export class TempFileService {
     extension,
   }: ISaveBufferToFile) {
     const dirPath = join(process.cwd(), 'temp-data', folder);
-    this.#logger.debug('saving file', {
-      dirPath,
-    });
+
     await this.createDirectoryIfNotExists(dirPath);
 
-    this.#logger.debug('saving file', {
-      fileName,
-      folder,
-      extension,
-      path: join(dirPath, `${fileName}.${extension}`),
-    });
     try {
       document.info.Title = fileName;
       document.pipe(
@@ -37,6 +29,9 @@ export class TempFileService {
       );
 
       document.end();
+      this.#logger.log('File has been written', {
+        [`fileName.${extension}`]: join(dirPath, `${fileName}.${extension}`),
+      });
       return join(dirPath, `${fileName}.${extension}`);
     } catch (err) {
       this.#logger.error('Failed to write file', {
