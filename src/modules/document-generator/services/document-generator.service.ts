@@ -77,7 +77,12 @@ export class DocumentGeneratorService {
           fileName: `${job.id}`,
           folder: `${job.id}${delimiter}${getRandomUuid()}`,
         });
-
+      this.#logger.warn('fileName', {
+        data: {
+          fileName,
+        },
+        jobId: +job.id,
+      });
       const responseq = await firstValueFrom(
         this.client.send<DataGroupedByDate>(PDF_CREATED, {
           data: {
@@ -93,10 +98,11 @@ export class DocumentGeneratorService {
         data: responseq,
       };
     } catch (error) {
-      this.#logger.error('Generate Pdf', { error });
+      this.#logger.error('Generate Pdf', error);
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
         message: 'error generating pdf',
+        error,
       });
     }
   }
