@@ -35,7 +35,7 @@ export class DocumentProcessorService {
     groupedData: IGroup<ItemsGroupped>,
     jobId: JobId,
   ): Promise<DataGroupedByDate> {
-    const batchSize = 20;
+    const batchSize = 100;
     const dataGroupedByDate: DataGroupedByDate = {};
     const entries = Object.entries(groupedData);
 
