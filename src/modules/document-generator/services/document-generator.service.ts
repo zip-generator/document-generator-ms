@@ -31,7 +31,7 @@ export class DocumentGeneratorService {
   ) {}
   async generatePdf(
     params: GeneratePdfDto,
-    jobId: Job,
+    job: Job,
   ): Promise<ResponseDocument> {
     try {
       const [data] = await Promise.all([
@@ -41,7 +41,7 @@ export class DocumentGeneratorService {
         this.documentRepository.searchContributorByApiKey(envs.apiKey),
       ]);
       if (!data.length) {
-        await jobId.moveToFailed({
+        await job.moveToFailed({
           message: 'no data found',
         });
         throw new RpcException({
@@ -69,13 +69,13 @@ export class DocumentGeneratorService {
 
       // const dataGroupedByDate: DataGroupedByDate =
       const response: DataGroupedByDate =
-        await this.documentProcessor.processGroupedData(grouppedData, jobId.id);
+        await this.documentProcessor.processGroupedData(grouppedData, job.id);
 
       const fileName =
         await this.tempFolderService.saveJsonFile<DataGroupedByDate>({
           data: response,
-          fileName: `${jobId.id}`,
-          folder: `${jobId.id}${delimiter}${getRandomUuid()}`,
+          fileName: `${job.id}`,
+          folder: `${job.id}${delimiter}${getRandomUuid()}`,
         });
 
       const responseq = await firstValueFrom(
@@ -83,7 +83,7 @@ export class DocumentGeneratorService {
           data: {
             fileName,
           },
-          jobId: +jobId.id,
+          jobId: +job.id,
         }),
       );
 
@@ -93,7 +93,7 @@ export class DocumentGeneratorService {
         data: responseq,
       };
     } catch (error) {
-      this.#logger.error('Generate Pdf', error);
+      this.#logger.error('Generate Pdf', { error });
       throw new RpcException({
         status: HttpStatus.BAD_REQUEST,
         message: 'error generating pdf',
