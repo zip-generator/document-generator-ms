@@ -35,37 +35,38 @@ export class DocumentProcessorService {
     groupedData: IGroup<ItemsGroupped>,
     jobId: JobId,
   ): Promise<DataGroupedByDate> {
-    const batchSize = 100;
+    const batchSize = 20;
     const dataGroupedByDate: DataGroupedByDate = {};
     const entries = Object.entries(groupedData);
 
     for (let i = 0; i < entries.length; i += batchSize) {
       const batch = entries.slice(i, i + batchSize);
       this.#logger.debug('processing batch', { batch: i });
-      await Promise.all(
-        batch.map(async ([fecha, clientInvoices]) => {
-          await Promise.all(
-            clientInvoices.map(async (item) => {
-              const processedData = await this.processInvoiceItem({
-                item,
-                identification: {
-                  ...item.hacienda?.['identificacion'],
-                  sello: item?.sello,
-                },
-                jobId,
-              });
-              await this.documentGrouper.groupDataByDateAndType(
-                {
-                  pdfDocument: processedData.pdfDocument,
-                  identificacion: item.hacienda?.['identificacion'],
-                },
-                fecha,
-                dataGroupedByDate,
-              );
-            }),
-          );
-        }),
-      );
+
+      for (const [fecha, clientInvoices] of batch) {
+        await Promise.all(
+          clientInvoices.map(async (item) => {
+            const processedData = await this.processInvoiceItem({
+              item,
+              identification: {
+                ...item.hacienda?.['identificacion'],
+                sello: item?.sello,
+              },
+              jobId,
+            });
+            await this.documentGrouper.groupDataByDateAndType(
+              {
+                pdfDocument: processedData.pdfDocument,
+                identificacion: item.hacienda?.['identificacion'],
+              },
+              fecha,
+              dataGroupedByDate,
+            );
+          }),
+        );
+      }
+      // batch.map(async ([fecha, clientInvoices]) => {}),
+      this.#logger.debug('batch processed', { batch: i });
     }
 
     return dataGroupedByDate;
