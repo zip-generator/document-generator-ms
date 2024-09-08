@@ -6,13 +6,6 @@ COPY package.json ./
 COPY pnpm-lock.yaml ./
 COPY prisma ./prisma
 
-# RUN apt-get update && \
-#   apt-get install -y software-properties-common && \
-#   apt-get install -y build-essential && \
-#   apt-get install -y python3 && \
-#   apt-get install -y libreoffice && \
-#   mkdir -p /opt/libreoffice7.0/program && \
-#   ln -s /usr/bin/soffice /opt/libreoffice7.0/program/soffice.bin && \
   RUN npm install -g pnpm && pnpm install && \
   pnpm prisma:generate --schema prisma/schema.prisma 
 
