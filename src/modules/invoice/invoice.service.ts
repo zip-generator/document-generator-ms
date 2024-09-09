@@ -56,7 +56,6 @@ export class InvoiceService {
       );
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
-    this.#logger.debug('QLO', result.payload.hacienda);
     const dataTemplate: IResultDataforReports = buildCommonInfo({
       cuerpoDocumento: result.payload.hacienda.cuerpoDocumento,
       documentoR:
