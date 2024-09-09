@@ -56,7 +56,7 @@ export class InvoiceService {
       );
       jsonFile = Buffer.from(JSON.stringify(payloadJSON, null, 2), 'utf-8');
     }
-
+    this.#logger.debug('QLO', result.payload.hacienda);
     const dataTemplate: IResultDataforReports = buildCommonInfo({
       cuerpoDocumento: result.payload.hacienda.cuerpoDocumento,
       documentoR:
@@ -69,13 +69,14 @@ export class InvoiceService {
       identificacion: result.payload.hacienda.identificacion,
       infoSeguros: result.payload.informacionSeguros,
       ivaValue: this.calculateIvaValue(result.payload.hacienda.resumen),
-      recep: result.payload.hacienda.receptor,
+      recep:
+        result.payload.hacienda.receptor ??
+        result.payload.hacienda?.['sujetoExcluido'],
       result,
       resumen: result.payload.hacienda.resumen,
     });
 
     const invoiceType = result.payload.hacienda.identificacion.tipoDte;
-
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
         data: {
@@ -114,6 +115,13 @@ export class InvoiceService {
             atencionId: dataTemplate.info?.['infoSeguros']?.['atencionId'],
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],
+          },
+          extension: {
+            nombreEntrega: dataTemplate.info?.['extension']?.['nombEntrega'],
+            noDocumentoEntrega:
+              dataTemplate.info?.['extension']?.['docuEntrega'],
+            nombreRecibe: dataTemplate.info?.['extension']?.['nombRecibe'],
+            noDocumentoRecibe: dataTemplate.info?.['extension']?.['docuRecibe'],
           },
           resume: dataTemplate.info?.['resumen'],
           body: dataTemplate.data,
