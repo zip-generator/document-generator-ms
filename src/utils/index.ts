@@ -15,7 +15,7 @@ const removeLatestItem = <T>(array: T[]) => {
 const generarFilasEnBlancosReporte = (
   infoReporte: IResultDataforReports,
   limiteColumnas: number,
-) => {
+): unknown[] => {
   const filas = [];
   for (let i = infoReporte.data.length; i < limiteColumnas; i++) {
     infoReporte.data.push({
@@ -26,7 +26,7 @@ const generarFilasEnBlancosReporte = (
       codigo: null,
       codTributo: null,
       uniMedida: null,
-      descripcion: '',
+      descripcion: null,
       precioUni: null,
       montoDescu: null,
       ventaNoSuj: null,
@@ -52,7 +52,6 @@ const generatePayloadJsonFile = (
   payloadMH: any,
   invoice: IResultReporte,
 ): IJSonFile => {
-  console.log({ invoice });
   return {
     ...payloadMH,
     selloRecibido: invoice.sello,

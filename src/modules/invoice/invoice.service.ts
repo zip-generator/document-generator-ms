@@ -1,11 +1,16 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   buildCommonInfo,
+  generarFilasEnBlancosReporte,
   generatePayloadJsonFile,
   getNexyDay,
   makeUrl,
 } from '@app/utils';
-import { GENERATE_DOCUMENT, NATS_SERVICE } from '@app/config';
+import {
+  GENERATE_DOCUMENT,
+  LIMITE_PAGINAS_REPORTES,
+  NATS_SERVICE,
+} from '@app/config';
 import { IJSonFile, IResultDataforReports } from '@app/interfaces';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { catchError, firstValueFrom } from 'rxjs';
@@ -74,6 +79,9 @@ export class InvoiceService {
       result,
       resumen: result.payload.hacienda.resumen,
     });
+    if (dataTemplate?.data?.length < LIMITE_PAGINAS_REPORTES) {
+      generarFilasEnBlancosReporte(dataTemplate, LIMITE_PAGINAS_REPORTES);
+    }
 
     const invoiceType = result.payload.hacienda.identificacion.tipoDte;
     const pdfDocument: string = await firstValueFrom(
@@ -108,9 +116,10 @@ export class InvoiceService {
             phone: dataTemplate.info?.['receptor']?.['telefono'],
             doctor: dataTemplate.info?.['infoSeguros']?.['medico'],
             deducible: dataTemplate.info?.['infoSeguros']?.['deducible'],
-            copaago: dataTemplate.info?.['infoSeguros']?.['copaago'],
-            coaseguroPercentage:
+            copago: dataTemplate.info?.['infoSeguros']?.['copaago'],
+            coaseguroPercentages:
               dataTemplate.info?.['infoSeguros']?.['porcentajeCoaseguro'],
+            coaseguro: dataTemplate.info?.['infoSeguros']?.['coaseguro'],
             atencionId: dataTemplate.info?.['infoSeguros']?.['atencionId'],
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],

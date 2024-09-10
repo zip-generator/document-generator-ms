@@ -16,4 +16,5 @@ const TIPO_IDENTIFICACION = {
   '14': 'Comprobante de Sujeto Excluido',
   '05': 'Nota de Credito',
 };
-export { DTE_CUSTOM, TIPO_IDENTIFICACION };
+const LIMITE_PAGINAS_REPORTES = 10;
+export { DTE_CUSTOM, TIPO_IDENTIFICACION, LIMITE_PAGINAS_REPORTES };
