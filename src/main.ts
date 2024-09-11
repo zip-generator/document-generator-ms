@@ -5,7 +5,7 @@ import { envs } from './config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const logger = new Logger('Document-Generator-MS');
+  const logger = new Logger('DOCUMENT-GENERATOR-MS');
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
     {
@@ -24,6 +24,6 @@ async function bootstrap() {
   );
 
   await app.listen();
-  logger.log(`Products Microservice running on port ${envs.port}`);
+  logger.log(`Document Generator running on port ${envs.port}`);
 }
 bootstrap();

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +5,207 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model contribuyentes {
+  id                              Int                               @id @default(autoincrement()) @map("id")
+  nombre                          String?                           @map("nombre") @db.VarChar(100)
+  direccion                       String?                           @map("direccion") @db.VarChar(150)
+  departamento                    Int?                              @default(0) @map("departamento")
+  municipio                       Int?                              @default(0) @map("municipio")
+  canton                          Int?                              @default(0) @map("canton")
+  pais                            Int?                              @default(0) @map("pais")
+  telefono                        String?                           @map("telefono") @db.VarChar(20)
+  correo                          String?                           @map("correo") @db.VarChar(100)
+  tipoContribuyente               String?                           @map("tipo_contribuyente") @db.VarChar(50)
+  tipoIdentificacion              Int?                              @default(0) @map("tipo_identificacion")
+  identificacion                  String?                           @map("identificacion") @db.VarChar(20)
+  fechaCreacion                   DateTime?                         @default(now()) @map("fecha_creacion") @db.Timestamp(0)
+  fechaModificacion               DateTime?                         @map("fecha_modificacion") @db.DateTime(0)
+  usuarioCreacion                 String?                           @map("usuario_creacion") @db.VarChar(50)
+  usuarioModificacion             String?                           @map("usuario_modificacion") @db.VarChar(50)
+  estado                          Int?                              @default(0) @map("estado")
+  numeroDocumento                 String?                           @map("numero_documento") @db.VarChar(20)
+  apiKey                          String?                           @map("apiKey") @db.VarChar(100)
+  cantidadDte                     Int?                              @default(0) @map("cantidad_dte")
+  token                           String?                           @map("token") @db.Text
+  plantilla                       String?                           @map("plantilla") @db.VarChar(100)
+  apikeyWhatsapp                  String?                           @map("apikeyWhatsapp") @db.VarChar(100)
+  whatsappInstance                String?                           @map("whatsappInstance") @db.VarChar(100)
+  usuario                         String?                           @map("usuario") @db.VarChar(50)
+  password                        String?                           @map("password") @db.Text
+  llavePublica                    String?                           @map("llave_publica") @db.Text
+  codigoActividad                 String?                           @map("codigo_actividad") @db.Text
+  plantillaCcf                    String?                           @map("plantilla_ccf") @db.Text
+  plantillaFactura                String?                           @map("plantilla_factura") @db.Text
+  plantillaSujetoExcluido         String?                           @map("plantilla_sujeto_excluido") @db.Text
+  plantillaNotaCredito            String?                           @map("plantilla_nota_credito") @db.Text
+  plantillaNotaDebito             String?                           @map("plantilla_nota_debito") @db.Text
+  usuarioCorreo                   String?                           @map("usuario_correo") @db.Text
+  passwordCorreo                  String?                           @map("password_correo") @db.Text
+  puertoCorreo                    String?                           @map("puerto_correo") @db.Text
+  hostCorreo                      String?                           @map("host_correo") @db.Text
+  plantillaComprobanteRetencion   String?                           @map("plantilla_comprobante_retencion") @db.Text
+  departamentoMh                  departamentoMh?                   @relation(fields: [departamento], references: [idDepartamento])
+  municipioMh                     municipioMh?                      @relation(fields: [municipio], references: [idMunicipio])
+  paisMh                          paisMh?                           @relation(fields: [pais], references: [idPais])
+  facturaelectronicaCorrelativos  facturaElectronicaCorrelativos[]
+  facturaelectronicaTransacciones facturaElectronicaTransacciones[]
+
+  @@index([canton], map: "idx_canton")
+  @@index([apiKey], map: "idx_contribuyentes_apiKey")
+  @@index([departamento], map: "idx_departamento")
+  @@index([municipio], map: "idx_municipio")
+  @@index([pais], map: "idx_pais")
+  @@index([tipoContribuyente], map: "idx_tipo_contribuyente")
+  @@index([tipoIdentificacion], map: "idx_tipo_identificacion")
+  @@map("contribuyentes")
+}
+
+model departamentoMh {
+  idDepartamento Int              @id @default(autoincrement())
+  nombre         String           @db.VarChar(100)
+  codigo         String           @db.VarChar(20)
+  descripcion    String           @db.VarChar(100)
+  zona           String           @db.VarChar(100)
+  idPais         Int
+  contribuyentes contribuyentes[]
+  paisMh         paisMh           @relation(fields: [idPais], references: [idPais], onDelete: NoAction)
+  municipioMh    municipioMh[]
+
+  @@index([idPais], map: "idx_id_pais")
+  @@map("departamento_mh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaelectronicaContingencias {
+  id                              Int                               @id @default(autoincrement())
+  nit                             String?
+  payload                         String?                           @db.LongText
+  estado                          String?
+  fechaHora                       DateTime?                         @map("fecha_hora")
+  mensaje                         String?
+  selloRecibido                   String?                           @map("sello_recibido")
+  observaciones                   String?
+  status                          Boolean                           @default(false)
+  facturaelectronicaLotes         facturaElectronicaLotes[]
+  facturaElectronicaTransacciones facturaElectronicaTransacciones[]
+
+  @@index([selloRecibido], map: "idx_sello_recibido_facturaelectronica_contingencias")
+  @@map("facturaelectronica_contingencias")
+}
+
+model facturaElectronicaCorrelativos {
+  id                  Int             @id @default(autoincrement())
+  idContribuyente     Int?            @default(0) @map("id_contribuyente")
+  tipoDte             Int?            @default(0) @map("tipo_dte")
+  numeroControlActual Int?            @default(0) @map("numero_control_actual")
+  caja                Int?            @default(0)
+  sucursal            Int?            @default(0)
+  fechaCreacion       DateTime?       @default(now()) @map("fecha_creacion") @db.Timestamp(0)
+  fechaModificacion   DateTime?       @map("fecha_modificacion") @db.DateTime(0)
+  estado              Int?            @default(0)
+  contribuyentes      contribuyentes? @relation(fields: [idContribuyente], references: [id])
+  tiposDte            tiposDte?       @relation(fields: [tipoDte], references: [id])
+
+  @@index([tipoDte], map: "facturaelectronica_correlativos_tipo_dte_fkey")
+  @@index([idContribuyente], map: "idx_id_contribuyente")
+  @@map("facturaelectronica_correlativos")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaElectronicaLotes {
+  id                              Int                             @id @default(autoincrement())
+  codigoLote                      String                          @unique @map("codigo_lote") @db.VarChar(50)
+  idEnvio                         String                          @map("id_envio") @db.VarChar(50)
+  nitEmisor                       String                          @map("nit_emisor") @db.VarChar(50)
+  payload                         String?                         @db.LongText
+  response                        String?                         @db.LongText
+  estado                          String                          @db.VarChar(100)
+  fechaProcesamiento              DateTime?                       @map("fecha_procesamiento")
+  selloRecibidoContingencia       String?                         @map("sello_recibido_contingencia") @db.Text
+  idContingencia                  Int                             @map("id_contingencia")
+  statusLote                      Boolean                         @default(true)
+  facturaelectronicaContingencias facturaelectronicaContingencias @relation(fields: [idContingencia], references: [id], onDelete: NoAction)
+
+  @@index([idContingencia], map: "facturaelectronica_lotes_id_contingencia_fkey")
+  @@map("facturaelectronica_lotes")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturaElectronicaTransacciones {
+  id                              Int                              @id @default(autoincrement())
+  idContribuyente                 Int?                             @default(0) @map("id_contribuyente")
+  idDte                           Int?                             @default(0) @map("id_dte")
+  fechaEmision                    DateTime?                        @default(now()) @map("fecha_emision") @db.DateTime(0)
+  dte                             String?                          @db.LongText
+  numeroControl                   String?                          @map("numero_control") @db.VarChar(100)
+  uuid                            String?                          @db.VarChar(100)
+  estadoDte                       String?                          @map("estado_dte") @db.VarChar(20)
+  anulado                         Int?                             @default(0)
+  anulacion                       String?                          @db.Text
+  selloRegistro                   String?                          @map("sello_registro") @db.VarChar(100)
+  firmaRegistro                   String?                          @map("firma_registro") @db.VarChar(100)
+  idFacturaErp                    Int?                             @default(0) @map("id_factura_erp")
+  statusSincronizacion            Int?                             @default(0) @map("status_sincronizacion")
+  observaciones                   String?                          @db.VarChar(100)
+  responseMh                      String?                          @map("response_mh") @db.LongText
+  payload                         String?                          @db.LongText
+  dteAnulado                      String?                          @map("dte_anulado") @db.Text
+  fechaHoraProcesamiento          DateTime?                        @map("fecha_hora_procesamiento") @db.DateTime(0)
+  codigoLote                      String?                          @map("codigo_lote") @db.VarChar(50)
+  selloRecibidoContingencia       String?                          @map("sello_recibido_contingencia") @db.VarChar(100)
+  contingencia                    Int?
+  idContingencia                  Int?
+  puntoVentaMh                    String?                          @db.VarChar(100)
+  facturaelectronicaContingencias facturaelectronicaContingencias? @relation(fields: [idContingencia], references: [id])
+  contribuyentes                  contribuyentes?                  @relation(fields: [idContribuyente], references: [id])
+  tiposDte                        tiposDte?                        @relation(fields: [idDte], references: [id])
+
+  @@index([codigoLote], map: "idx_facturaelectronica_transacciones_codigo_lote")
+  @@index([uuid], map: "idx_facturaelectronica_transacciones_uuid")
+  @@index([idContingencia], map: "idx_idContingencia")
+  @@index([idContribuyente], map: "idx_id_contribuyente")
+  @@index([idDte], map: "idx_id_dte")
+  @@map("facturaelectronica_transacciones")
+}
+
+model municipioMh {
+  idMunicipio     Int              @id @default(autoincrement())
+  codigo          String           @db.VarChar(20)
+  descripcion     String           @db.VarChar(100)
+  idDepartamento  Int
+  contribuyentes  contribuyentes[]
+  departamento_mh departamentoMh   @relation(fields: [idDepartamento], references: [idDepartamento], onDelete: NoAction)
+
+  @@index([idDepartamento], map: "idx_id_departamento")
+  @@map("municipio_mh")
+}
+
+model paisMh {
+  idPais          Int              @id @default(autoincrement())
+  codigo          String           @db.VarChar(20)
+  nombre          String           @db.VarChar(100)
+  contribuyentes  contribuyentes[]
+  departamento_mh departamentoMh[]
+
+  @@map("pais_mh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tiposDte {
+  id                              Int                               @id @default(autoincrement())
+  schema                          String?                           @db.LongText
+  descripcion                     String?                           @db.VarChar(50)
+  fechaCreacion                   DateTime?                         @default(now()) @map("fecha_creacion") @db.Timestamp(0)
+  fechaModificacion               DateTime?                         @map("fecha_modificacion") @db.DateTime(0)
+  usuarioCreacion                 String?                           @map("usuario_creacion") @db.VarChar(50)
+  usuarioModificacion             String?                           @map("usuario_modificacion") @db.VarChar(50)
+  estado                          Int?                              @default(0)
+  codigoDte                       String?                           @db.Text
+  versionDte                      String?                           @db.Text
+  facturaElectronicaCorrelativos  facturaElectronicaCorrelativos[]
+  facturaElectronicaTransacciones facturaElectronicaTransacciones[]
+
+  @@map("tipos_dte")
 }
