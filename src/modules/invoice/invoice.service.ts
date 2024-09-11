@@ -84,6 +84,7 @@ export class InvoiceService {
     }
 
     const invoiceType = result.payload.hacienda.identificacion.tipoDte;
+    this.#logger.debug('QLO ', { asd: dataTemplate.info?.['infoSeguros'] });
     const pdfDocument: string = await firstValueFrom(
       this.client.send(GENERATE_DOCUMENT, {
         data: {
@@ -115,11 +116,6 @@ export class InvoiceService {
             nrc: dataTemplate.info?.['receptor']?.['nrc'],
             phone: dataTemplate.info?.['receptor']?.['telefono'],
             doctor: dataTemplate.info?.['infoSeguros']?.['medico'],
-            deducible: dataTemplate.info?.['infoSeguros']?.['deducible'],
-            copago: dataTemplate.info?.['infoSeguros']?.['copaago'],
-            coaseguroPercentages:
-              dataTemplate.info?.['infoSeguros']?.['porcentajeCoaseguro'],
-            coaseguro: dataTemplate.info?.['infoSeguros']?.['coaseguro'],
             atencionId: dataTemplate.info?.['infoSeguros']?.['atencionId'],
             insuranceCompany:
               dataTemplate.info?.['infoSeguros']?.['aseguradora'],
@@ -134,6 +130,7 @@ export class InvoiceService {
           resume: dataTemplate.info?.['resumen'],
           body: dataTemplate.data,
           fechaNextDay,
+          observaciones: dataTemplate.info?.['observaciones'],
         },
         extension: 'pdf',
         fileName: `${identification?.['codigoGeneracion']}`,
