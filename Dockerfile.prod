@@ -1,44 +1,42 @@
 # Dependencies (use npm to install pnpm globally)
 FROM node:21-alpine3.19 AS deps
+RUN npm install -g pnpm  # Install pnpm globally
 
 WORKDIR /usr/src/app
 
-COPY package.json ./
-COPY pnpm-lock.yaml ./
+COPY --chown=node:node pnpm-lock.yaml ./
+COPY --chown=node:node package.json ./
+
 COPY prisma ./prisma
-RUN npm install -g pnpm  # Install pnpm globally
 
 RUN pnpm install --frozen-lockfile
 
 # Builder (use pnpm)
 FROM node:21-alpine3.19 AS build
 
+RUN npm install -g pnpm  # Install pnpm globally
 WORKDIR /usr/src/app
 
-RUN npm install -g pnpm  # Install pnpm globally
-COPY --from=deps /usr/src/app/node_modules ./node_modules 
+COPY --chown=node:node --from=deps /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=deps /usr/src/app/package.json ./package.json
+COPY --chown=node:node --from=deps /usr/src/app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=deps /usr/src/app/prisma ./prisma
 # Copy application code
 COPY . .
 
 RUN pnpm  build &&\
    npx prisma generate 
-    # Production image (optimize with pnpm)
+
+RUN pnpm prune --prod
+
 FROM node:21-alpine3.19 AS prod
 
 WORKDIR /usr/src/app
-RUN npm install -g pnpm  # Install pnpm globally
+COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/prisma ./prisma
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-# Instala solo las dependencias de producción
-RUN pnpm install --prod --frozen-lockfile
-
 
 ENV NODE_ENV=production
-
-USER node
 
 EXPOSE 3000
 
